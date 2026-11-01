@@ -3,7 +3,7 @@
    ------------------------------------------------------------
    - 从 GET /api/report/<session_id> 读取 SQLite 中的真实评分
    - 渲染：综合评分环、4 维加权评分条 / 8 维能力雷达、薄弱知识点、改进建议
-   - 语音数据（语速/停顿/音量）第三阶段尚未采集，显示空状态，不虚构
+   - 语音指标需关联录音；无数据保持未采集，不虚构
    - session_id 来源：URL ?id= 或 localStorage iv-session
    - 保留底部三按钮逻辑（返回首页 / 更换岗位 / 同配置再练）
    ============================================================ */
@@ -15,9 +15,9 @@
     grid: "rgba(15, 23, 42, 0.07)",
     gridFill: "rgba(15, 23, 42, 0.015)",
     axis: "rgba(15, 23, 42, 0.06)",
-    label: "#64748B",
-    labelDim: "#94A3B8",
-    line: "#6C63FF",
+    label: "#475569",
+    labelDim: "#667085",
+    line: "#6254E8",
     lineGlow: "rgba(108, 99, 255, 0.45)",
     pointFill: "#FFFFFF",
     radarFillTop: "rgba(108, 99, 255, 0.22)",
@@ -64,8 +64,8 @@
     syncExportButton();
     reportBody.classList.add("is-hidden");
     reportEmpty.classList.remove("is-hidden");
-    if (title) emptyTitle.textContent = title;
-    if (desc) emptyDesc.textContent = desc;
+    if (title && emptyTitle.textContent !== title) emptyTitle.textContent = title;
+    if (desc && emptyDesc.textContent !== desc) emptyDesc.textContent = desc;
   }
   function showBody() {
     reportEmpty.classList.add("is-hidden");
@@ -86,6 +86,21 @@
     return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
       return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
     });
+  }
+
+  var partialSignature = '';
+  function renderPartial(items) {
+    if (!Array.isArray(items) || !items.length) return;
+    var signature = JSON.stringify(items);
+    if (signature !== partialSignature) {
+      el('partialReviews').innerHTML = items.map(function (item,index) {
+        return '<details class="answer-review"' + (index===0 ? ' open' : '') + '><summary>第 ' + (index+1) + ' 次作答：' + esc(item.question) + '</summary>'
+          + '<p class="review-label">你的回答</p><blockquote>' + esc(item.answer) + '</blockquote>'
+          + '<p class="review-label">已保存的点评</p><p class="saved-feedback">' + esc(item.comment || '这题未保存点评，可先回看自己的回答。') + '</p></details>';
+      }).join('');
+      partialSignature = signature;
+    }
+    el('partialReport').classList.remove('is-hidden');
   }
 
   /* ---------- 评分环动画 ---------- */
@@ -144,7 +159,7 @@
   /* ---------- 渲染：总评 ---------- */
   function renderComment(data) {
     var box = el("reportComment");
-    el("commentHead").textContent = "AI 总评：" + (data.knowledge_summary || "");
+    el("commentHead").textContent = data.knowledge_summary || "";
     el("commentBody").textContent = data.overall_comment || "";
     var note = el("confidenceNote");
     if (data.confidence_note) {
@@ -404,6 +419,7 @@
       .then(function (response) { if (!response.ok) throw new Error(); return response.json(); })
       .then(function (data) {
         renderSpeech(data.speech_analyses);
+    el('partialReport').classList.add('is-hidden');
         var complete = data.speech_analyses.every(function (entry) { return entry.feedback && entry.feedback.status === 'ok'; });
         showToast(complete ? '语音建议已生成并保存' : '部分语音建议暂不可用，可稍后重试；测量结果仍可查看');
       })
@@ -429,6 +445,7 @@
     renderWeaknesses(data.weaknesses);
     renderSuggestions(data.suggestions);
     renderSpeech(data.speech_analyses);
+    el('partialReport').classList.add('is-hidden');
     exportReady = true;
     exportSid = data.interview.id || getSid();
     syncExportButton();
@@ -445,6 +462,7 @@
   var reportLoading = false;
   var reportFailed = false;
   var reportWaiting = false;
+  var pendingPolls = 0;
   var reportRetryTimer = null;
   function loadReport() {
     if (reportLoading || exportBusy) return;
@@ -459,7 +477,7 @@
     el('retryReportBtn').disabled = true;
     if (!reportWaiting) showEmpty('正在加载报告', '正在读取已保存的报告；首次评分可能需要一些时间，请稍候。');
     var controller = window.AbortController ? new AbortController() : null;
-    var deadline = setTimeout(function () { if (controller) controller.abort(); }, 75000);
+    var deadline = setTimeout(function () { if (controller) controller.abort(); }, 15000);
     fetch("/api/report/" + encodeURIComponent(sid), controller ? {signal: controller.signal} : {})
       .then(function (res) { return res.text().then(function (text) {
         var data;
@@ -470,31 +488,44 @@
       .then(function (r) {
         reportFailed = r.data.reason === 'failed';
         reportWaiting = r.status === 202;
+        if (r.status===202 || r.data.reason==='failed') renderPartial(r.data.partial);
         if (r.ok && r.data.available) {
           try { renderReport(r.data); }
           catch (error) { throw new Error('报告显示失败，请点击重试加载报告；面试记录仍会保留。'); }
         } else if (r.status === 202 && r.data.reason === 'generating') {
           showEmpty(r.data.task_state === 'pending' ? '报告已排队' : '报告正在生成', r.data.message || '正在分析回答，您可以离开，稍后从历史面试查看。');
-          reportRetryTimer = setTimeout(loadReport, 2000);
+          pendingPolls++;
+          reportRetryTimer = setTimeout(loadReport, document.hidden ? 30000 : pendingPolls>20 ? 10000 : pendingPolls>10 ? 5000 : 2000);
         } else if (r.ok && r.data.reason === "not_finished") {
           showEmpty("面试尚未结束", r.data.message || "请先完成或结束本场面试。");
         } else if (r.status === 404) {
+          el('partialReport').classList.add('is-hidden');
           showEmpty("无法访问这场面试", (r.data && r.data.error) || '请使用开始这场面试时的浏览器和网址，从历史面试重新打开。');
         } else {
           showEmpty("报告暂不可用", (r.data && r.data.error) || "请稍后重试");
         }
       })
       .catch(function (error) {
+        reportWaiting = false;
         var message = error.name === 'AbortError' ? '等待报告响应超时，面试记录仍会保留。请点击重试加载报告。'
           : error.message === 'Failed to fetch' || error instanceof TypeError ? '连接暂时中断，面试记录仍会保留。请点击重试加载报告，无需重新面试。' : error.message;
         showEmpty("报告暂未加载成功", message || '请点击重试加载报告，无需重新面试。');
       }).finally(function () {
         clearTimeout(deadline);
         reportLoading = false;
-        el('refreshBtn').disabled = false;
-        el('retryReportBtn').disabled = false;
+        el('refreshBtn').disabled = reportWaiting;
+        el('retryReportBtn').disabled = reportWaiting;
+        el('retryReportBtn').textContent = reportWaiting ? '正在自动更新…' : '重试加载报告';
+        el('emptyHomeLink').textContent = reportWaiting ? '返回首页，稍后查看' : '返回首页';
       });
   }
+
+  document.addEventListener('visibilitychange',function () {
+    if (!reportWaiting) return;
+    clearTimeout(reportRetryTimer);
+    if (document.hidden) reportRetryTimer=setTimeout(loadReport,30000);
+    else loadReport();
+  });
 
   /* ---------- 导出 / 刷新 / 再练按钮 ---------- */
   var exportBtn = el("exportBtn");

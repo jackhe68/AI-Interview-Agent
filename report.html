@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>面试报告 · AI Interview Agent</title>
-  <link rel="stylesheet" href="/static/css/style.css?v=clarity-20261101">
+  <link rel="stylesheet" href="{{ asset_url('css/style.css') }}">
   <style>
     /* 报告页第三阶段补充样式 */
     .empty-state { padding: 80px 24px; text-align: center; }
@@ -67,12 +67,18 @@
     <p class="report-export-status" id="exportStatus" role="status" aria-live="polite">报告加载后可导出 PDF，包含完整参考回答与练习任务。</p>
 
     <!-- 空状态 / 加载 -->
-    <section class="glass-card empty-state is-hidden" id="reportEmpty">
+    <section class="glass-card empty-state is-hidden" id="reportEmpty" role="status" aria-live="polite">
       <div class="empty-state__icon">📊</div>
       <div class="empty-state__title" id="emptyTitle">暂无报告数据</div>
       <div class="empty-state__desc" id="emptyDesc">请先完成一场面试，结束即可生成 AI 评分报告。</div>
       <button class="btn btn--outline" id="retryReportBtn" type="button">重试加载报告</button>
-      <a class="btn btn--primary" href="/">去开始面试</a>
+      <a class="btn btn--ghost" id="emptyHomeLink" href="/">返回首页</a>
+    </section>
+
+    <section class="glass-card practice-card is-hidden" id="partialReport">
+      <h2>先看已保存的逐题点评</h2>
+      <p class="practice-intro">综合报告完成前，也可先复习作答时已生成的点评。以下内容不会额外调用 AI。</p>
+      <div id="partialReviews"></div>
     </section>
 
     <!-- 报告正文 -->
@@ -106,8 +112,9 @@
             </div>
             <div class="score-sub" id="scoreSub"></div>
           </div>
-          <div class="report-comment" id="reportComment" class="is-hidden">
-            <div class="report-comment__head" id="commentHead">AI 总评</div>
+          <div class="report-comment" id="reportComment">
+            <h4 class="report-comment__title">AI 总评</h4>
+            <p class="report-comment__summary" id="commentHead"></p>
             <div class="report-comment__body" id="commentBody"></div>
             <div class="confidence-note is-hidden" id="confidenceNote"></div>
           </div>
@@ -119,7 +126,7 @@
             <span class="badge">AI 真实评分</span>
           </div>
           <canvas id="radarChart"></canvas>
-          <p class="confidence-note" id="radarNote"></p>
+          <p class="report-note" id="radarNote"></p>
           <div class="radar-values" id="radarValues"></div>
         </section>
       </div>
@@ -184,8 +191,8 @@
   </footer>
 
   <div class="toast" id="toast"></div>
-  <script src="/static/js/navigation.js?v=practice-flow-20261101"></script>
-  <script src="/static/js/main.js?v=clarity-20261101"></script>
-  <script src="/static/js/report.js?v=clarity-20261101"></script>
+  <script src="{{ asset_url('js/navigation.js') }}"></script>
+  <script src="{{ asset_url('js/main.js') }}"></script>
+  <script src="{{ asset_url('js/report.js') }}"></script>
 </body>
 </html>

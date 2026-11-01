@@ -4,8 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>AI Interview Agent · AI 模拟面试系统</title>
-  <link rel="stylesheet" href="/static/css/style.css?v=clarity-20261101">
-  <link rel="stylesheet" href="/static/css/home.css?v=major-path-20261101">
+  <link rel="stylesheet" href="{{ asset_url('css/style.css') }}">
+  <link rel="stylesheet" href="{{ asset_url('css/home.css') }}">
 </head>
 <body class="home-page">
   <div class="bg-fx"></div>
@@ -45,7 +45,7 @@
             <a class="btn btn--primary btn--lg" href="#config">选择练习方向 <span aria-hidden="true">↗</span></a>
             <a class="home-history-link" href="/history">查看我的练习记录 →</a>
           </div>
-          <div class="home-facts"><span>6 大学科</span><span>{{ interview_catalog.major_count }} 个专业</span><span>八维复盘</span><span>PDF 带走练习</span></div>
+          <div class="home-facts"><span>6 大学科</span><span>{{ interview_catalog.major_count }} 个专业</span><span>按回答依据做八维复盘</span><span>PDF 带走练习</span></div>
         </div>
         <aside class="home-preview" aria-label="练习流程">
           <div class="home-preview-heading"><span class="home-live-dot"></span>为下一次面试做准备</div>
@@ -205,7 +205,7 @@
               <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6"/></svg>
             </div>
             <h3>多维能力报告</h3>
-            <p>综合评分、知识雷达、语速停顿分析、薄弱点定位与针对性改进建议。</p>
+            <p>综合评分、能力雷达、薄弱点与改进建议；语速停顿分析需使用录音作答并开启基础音频分析。缺少依据的维度显示未评估。</p>
           </div>
           <div class="glass-card feature-card fade-up fade-up--3">
             <div class="f-icon">
@@ -229,7 +229,7 @@
 
   <div class="toast" id="toast"></div>
   <script id="interviewCatalog" type="application/json">{{ interview_catalog | tojson }}</script>
-  <script src="/static/js/navigation.js?v=practice-flow-20261101"></script>
-  <script src="/static/js/main.js?v=clarity-20261101"></script>
+  <script src="{{ asset_url('js/navigation.js') }}"></script>
+  <script src="{{ asset_url('js/main.js') }}"></script>
 </body>
 </html>

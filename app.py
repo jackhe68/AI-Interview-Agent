@@ -67,6 +67,8 @@ if API_KEY:
 
 app = Flask(__name__, template_folder=".", static_folder="static")
 app.config["TEMPLATES_AUTO_RELOAD"] = True
+from asset_delivery import install as install_asset_delivery
+install_asset_delivery(app)
 app.config["MAX_CONTENT_LENGTH"] = MAX_AUDIO_BYTES  # 超过上限整体拒绝（413）
 
 # ------------------------------------------------------------------
@@ -403,9 +405,10 @@ def report_job_payload(interview_id, retry=False):
     guard = app.extensions.get('public_api_guard')
     subjects = guard.identities() if guard else ()
     job = REPORT_JOB_SERVICE.ensure(interview_id, subjects, retry=retry)
+    partial = answered_questions(dbm.get_messages(interview_id))
     if job['state'] == 'failed':
-        return {'available': False, 'reason': 'failed', 'task_state': 'failed', 'error': job['error']}, 503
-    return {'available': False, 'reason': 'generating', 'task_state': job['state'],
+        return {'available': False, 'reason': 'failed', 'task_state': 'failed', 'error': job['error'], 'partial': partial}, 503
+    return {'available': False, 'reason': 'generating', 'task_state': job['state'], 'partial': partial,
             'message': '正在等待分析，您可以离开，稍后从历史记录查看。' if job['state']=='pending' else 'AI 正在分析回答并整理报告，您可以离开，稍后回来查看。'}, 202
 
 

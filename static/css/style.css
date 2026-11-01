@@ -29,8 +29,8 @@
   --primary-dk: #5B5BD6;
   --accent:    #0EA5E9; /* 青 · 语音/声波 */
   --accent-dk: #0E7490;
-  --success:   #10B981;
-  --warning:   #D97706;
+  --success:   #047857;
+  --warning:   #B45309;
   --warning-bg: #FFF7E6;
   --danger:    #EF4444;
 
@@ -1363,3 +1363,17 @@ textarea, input, select { font-family: inherit; }
 .app-notice button { flex-shrink:0; padding:8px; text-decoration:underline; }
 
 .modal-mask[hidden] { display:none; }
+
+/* Report reading: labels stay short, assessment paragraphs remain body text. */
+.report-comment .report-comment__title { font-size:16px; color:var(--text-1); margin-bottom:12px; }
+.report-comment .report-comment__summary { font-size:15px; font-weight:500; color:#475569; line-height:1.9; margin-bottom:10px; max-width:68ch; overflow-wrap:anywhere; }
+.report-comment .report-comment__body { font-size:15px; line-height:1.9; max-width:68ch; color:#475569; overflow-wrap:anywhere; }
+.answer-review > p,.answer-review blockquote,.answer-review ol,.answer-review ul { max-width:68ch; }
+.answer-review .saved-feedback { white-space:pre-wrap; font-size:15px; line-height:1.9; }
+.report-note { margin-top:12px; padding:12px; color:#475569; background:var(--surface-soft); border:1px solid var(--border); border-radius:10px; font-size:13px; line-height:1.8; }
+#partialReport h2 { font-size:20px; margin-bottom:12px; }
+#reportEmpty:has(+ #partialReport:not(.is-hidden)) { padding:24px; }
+
+#reportEmpty:has(+ #partialReport:not(.is-hidden)) .empty-state__icon { display:none; }
+#reportEmpty:has(+ #partialReport:not(.is-hidden)) .empty-state__title { font-size:18px; margin-bottom:8px; }
+#reportEmpty:has(+ #partialReport:not(.is-hidden)) .empty-state__desc { margin-bottom:16px; }
