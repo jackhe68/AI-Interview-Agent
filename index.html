@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>AI Interview Agent · AI 模拟面试系统</title>
-  <link rel="stylesheet" href="/static/css/style.css">
+  <link rel="stylesheet" href="/static/css/style.css?v=practice-flow-20261101">
   <link rel="stylesheet" href="/static/css/home.css?v=major-path-20261101">
 </head>
 <body class="home-page">
@@ -34,6 +34,7 @@
   </header>
 
   <main id="top">
+    <div class="container" id="resumeBanner" hidden><div class="resume-banner"><p id="resumeSummary"></p><button type="button" class="btn btn--primary resume-interview" id="resumeLatest">继续上次面试</button><p role="status" id="resumeStatus"></p></div></div>
     <section class="hero">
       <div class="container hero__grid">
         <div>
@@ -228,6 +229,7 @@
 
   <div class="toast" id="toast"></div>
   <script id="interviewCatalog" type="application/json">{{ interview_catalog | tojson }}</script>
-  <script src="/static/js/main.js?v=major-path-20261101"></script>
+  <script src="/static/js/navigation.js?v=practice-flow-20261101"></script>
+  <script src="/static/js/main.js?v=practice-flow-20261101"></script>
 </body>
 </html>

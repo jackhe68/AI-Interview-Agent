@@ -21,6 +21,7 @@ def tracked_connection():
     return connection
 database.get_conn = tracked_connection
 import app as server
+server.app.config['REPORT_JOBS_INLINE'] = True
 import speech
 
 def tearDownModule():

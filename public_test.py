@@ -55,7 +55,7 @@ def install(app, db, daily_starts=30):
             if not isinstance(data, dict):
                 return jsonify(error='请求格式不正确'), 400
             sid = data.get('session_id')
-        elif request.endpoint in ('api_report', 'api_export_report', 'api_interview_state', 'api_delete_interview', 'api_speech_review', 'api_clear_background'):
+        elif request.endpoint in ('api_report', 'api_report_generate', 'api_export_report', 'api_interview_state', 'api_delete_interview', 'api_speech_review', 'api_clear_background'):
             sid = (request.view_args or {}).get('session_id')
         elif request.endpoint == 'api_transcribe':
             sid = request.form.get('session_id')

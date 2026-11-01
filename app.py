@@ -76,6 +76,8 @@ SPEECH_REVIEW_LOCK = threading.Lock()
 REPORT_STATE_LOCK = threading.Lock()
 REPORT_INFLIGHT = set()
 ANSWER_STATE_LOCK = threading.Lock()
+REPORT_JOB_LOCK = threading.Lock()
+REPORT_JOB_SERVICE = None
 
 
 class APIError(Exception):
@@ -391,7 +393,22 @@ def review_interview_speech(interview_id):
         SPEECH_REVIEW_LOCK.release()
 
 
-def report_to_json(interview_id, allow_generate=True):
+def report_job_payload(interview_id, retry=False):
+    global REPORT_JOB_SERVICE
+    from report_jobs import ReportJobs
+    with REPORT_JOB_LOCK:
+        if REPORT_JOB_SERVICE is None:
+            REPORT_JOB_SERVICE = ReportJobs(dbm, app, lambda sid: generate_report(sid))
+    guard = app.extensions.get('public_api_guard')
+    subjects = guard.identities() if guard else ()
+    job = REPORT_JOB_SERVICE.ensure(interview_id, subjects, retry=retry)
+    if job['state'] == 'failed':
+        return {'available': False, 'reason': 'failed', 'task_state': 'failed', 'error': job['error']}, 503
+    return {'available': False, 'reason': 'generating', 'task_state': job['state'],
+            'message': '正在等待分析，您可以离开，稍后从历史记录查看。' if job['state']=='pending' else 'AI 正在分析回答并整理报告，您可以离开，稍后回来查看。'}, 202
+
+
+def report_to_json(interview_id, allow_generate=True, background=False):
     """供 /api/report 返回：读取已存报告；不存在则按需生成。"""
     iv = dbm.get_interview(interview_id)
     if not iv:
@@ -404,6 +421,10 @@ def report_to_json(interview_id, allow_generate=True):
     if not report:
         if not allow_generate:
             return {'available': False, 'error': '报告尚未生成，请先加载报告后再导出'}, 409
+        if background and not app.config.get('REPORT_JOBS_INLINE', False):
+            if not any(m['role']=='user' for m in dbm.get_messages(interview_id)):
+                return {'available': False, 'error': '本场面试没有有效回答，无法生成评价'}, 400
+            return report_job_payload(interview_id)
         # One AI request per attempt; a refresh reuses an already saved result.
         try:
             report = generate_report(interview_id)
@@ -709,7 +730,13 @@ def api_interview_state(session_id):
     questions = [m for m in messages if m['role'] == 'assistant' and m['message_type'] in ('main_question','followup')]
     question = questions[-1] if questions else None
     comments = [m for m in messages if m['message_type'] == 'comment']
+    from datetime import datetime
+    try:
+        elapsed = max(0, int(time.time()-datetime.fromisoformat(iv['started_at']).timestamp()))
+    except (ValueError, TypeError):
+        elapsed = 0
     response = jsonify(session_id=session_id, job=iv['job'], level=iv['difficulty'], selection=dbm.get_selection(session_id),
+                   elapsed_seconds=elapsed, background_active=bool(dbm.get_background(session_id)),
                    question=question['content'] if question else '', question_sequence=question['sequence'] if question else None,
                    progress=dict(main=iv['current_question'],total=MAIN_QUESTION_COUNT,
                                  type='followup' if question and question['message_type']=='followup' else 'main'),
@@ -836,7 +863,23 @@ def api_end():
 # ------------------------------------------------------------------
 @app.route("/api/report/<session_id>")
 def api_report(session_id):
-    payload, code = report_to_json(session_id)
+    payload, code = report_to_json(session_id, background=True)
+    return jsonify(payload), code
+
+
+@app.route('/api/report/<session_id>/generate', methods=['POST'])
+def api_report_generate(session_id):
+    iv = dbm.get_interview(session_id)
+    if not iv:
+        return jsonify(error='面试记录不存在'), 404
+    if iv['status']=='active':
+        return jsonify(error='请先结束本场面试'), 409
+    if not any(m['role']=='user' for m in dbm.get_messages(session_id)):
+        return jsonify(error='本场面试没有有效回答，无法生成评价'), 400
+    if dbm.get_report(session_id):
+        payload, code = report_to_json(session_id, allow_generate=False)
+    else:
+        payload, code = report_job_payload(session_id, retry=True)
     return jsonify(payload), code
 
 

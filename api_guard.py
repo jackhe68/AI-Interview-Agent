@@ -43,6 +43,8 @@ class PublicAPIGuard:
                          'count INTEGER NOT NULL, PRIMARY KEY(bucket,subject,window))')
 
     def identities(self):
+        if g.get('report_subjects'):
+            return tuple(g.report_subjects)
         browser = session.get('trial_browser')
         if not browser:
             browser = secrets.token_hex(32)
@@ -170,4 +172,5 @@ def install(server, db, limits=None, trust_cloudflare=False):
                            if m.get('role')=='user' else dict(m) for m in current['history']]
         return original_ask(safe,mode)
     server.ask_next=quoted_ask
+    server.app.extensions['public_api_guard'] = guard
     return guard

@@ -51,7 +51,7 @@
       actionHtml = '<a class="btn btn--outline btn--sm" href="/report?id=' + encodeURIComponent(item.id) + '">查看报告</a>'
         + '<button class="btn btn--ghost btn--sm h-del" data-id="' + esc(item.id) + '" title="删除该记录">删除</button>';
     } else if (item.status === "active") {
-      actionHtml = '<span class="badge">进行中</span>'
+      actionHtml = '<button type="button" class="btn btn--primary btn--sm resume-interview" data-session="' + esc(item.id) + '">继续面试</button>'
         + '<button class="btn btn--ghost btn--sm h-del" data-id="' + esc(item.id) + '" title="删除该记录">删除</button>';
     } else {
       actionHtml = '<span class="badge">无有效回答</span>'

@@ -443,6 +443,8 @@
 
   /* ---------- 加载报告 ---------- */
   var reportLoading = false;
+  var reportFailed = false;
+  var reportWaiting = false;
   var reportRetryTimer = null;
   function loadReport() {
     if (reportLoading || exportBusy) return;
@@ -455,7 +457,7 @@
     reportLoading = true;
     el('refreshBtn').disabled = true;
     el('retryReportBtn').disabled = true;
-    showEmpty('正在加载报告', '正在读取已保存的报告；首次评分可能需要一些时间，请稍候。');
+    if (!reportWaiting) showEmpty('正在加载报告', '正在读取已保存的报告；首次评分可能需要一些时间，请稍候。');
     var controller = window.AbortController ? new AbortController() : null;
     var deadline = setTimeout(function () { if (controller) controller.abort(); }, 75000);
     fetch("/api/report/" + encodeURIComponent(sid), controller ? {signal: controller.signal} : {})
@@ -466,11 +468,13 @@
         return {ok: res.ok, status: res.status, data: data};
       }); })
       .then(function (r) {
+        reportFailed = r.data.reason === 'failed';
+        reportWaiting = r.status === 202;
         if (r.ok && r.data.available) {
           try { renderReport(r.data); }
           catch (error) { throw new Error('报告显示失败，请点击重试加载报告；面试记录仍会保留。'); }
         } else if (r.status === 202 && r.data.reason === 'generating') {
-          showEmpty('报告正在生成', '另一项请求正在生成这份报告，完成后将自动显示，请稍候。');
+          showEmpty(r.data.task_state === 'pending' ? '报告已排队' : '报告正在生成', r.data.message || '正在分析回答，您可以离开，稍后从历史面试查看。');
           reportRetryTimer = setTimeout(loadReport, 2000);
         } else if (r.ok && r.data.reason === "not_finished") {
           showEmpty("面试尚未结束", r.data.message || "请先完成或结束本场面试。");
@@ -554,7 +558,16 @@
     });
   }
   var refreshBtn = el("refreshBtn");
-  el('retryReportBtn').addEventListener('click', loadReport);
+  el('retryReportBtn').addEventListener('click', function () {
+    if (!reportFailed) { loadReport(); return; }
+    if (reportLoading) return;
+    reportLoading = true;
+    el('retryReportBtn').disabled = true;
+    fetch('/api/report/' + encodeURIComponent(getSid()) + '/generate', {method:'POST'})
+      .then(function (res) { if (!res.ok) return res.json().then(function (data) { throw new Error(data.error || '请稍后重试'); }); reportFailed = false; })
+      .catch(function (error) { showEmpty('重试暂未成功', error.message || '请检查网络后重试'); })
+      .finally(function () { reportLoading = false; el('retryReportBtn').disabled = false; if (!reportFailed) loadReport(); });
+  });
   if (refreshBtn) {
     refreshBtn.addEventListener("click", function () {
       showToast("正在重新加载报告…");
