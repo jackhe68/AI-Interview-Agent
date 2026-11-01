@@ -1109,6 +1109,10 @@ textarea, input, select { font-family: inherit; }
 .answer-review { border:1px solid var(--border); border-radius:12px; padding:16px; margin-bottom:12px; overflow-wrap:anywhere; }
 .answer-review > summary { font-weight:700; line-height:1.7; }
 .answer-review p, .answer-review blockquote, .answer-review ol, .answer-review ul { white-space:pre-wrap; line-height:1.8; font-size:14px; }
+.answer-review ol, .answer-review ul { padding-inline-start:2.25em; }
+.answer-review ol { list-style:decimal outside; }
+.answer-review ul { list-style:disc outside; }
+.answer-review li { padding-inline-start:.25em; overflow-wrap:anywhere; }
 .answer-review blockquote { margin:12px 0; padding:10px 14px; background:var(--surface-soft); border-left:3px solid var(--primary); }
 .review-label { color:var(--primary-dk); font-weight:700; margin:16px 0 6px; }
 .reference-answer { padding:12px; background:var(--surface-soft); border-radius:10px; margin:16px 0; }
