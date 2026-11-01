@@ -1,0 +1,25 @@
+# /etc/systemd/system/aiinterview.service
+[Unit]
+Description=AI Interview Agent (Flask + Waitress)
+After=network.target
+
+[Service]
+Type=simple
+User=deploy
+Group=deploy
+WorkingDirectory=/var/www/aiinterview
+EnvironmentFile=/var/www/aiinterview/.env
+ExecStart=/var/www/aiinterview/.venv/bin/python deploy/wsgi.py
+Restart=always
+RestartSec=3
+KillSignal=SIGTERM
+TimeoutStopSec=30
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=aiinterview
+
+# 4核8G 机器上给应用留 6G 上限；若是 2核4G，改成 3G
+MemoryMax=6G
+
+[Install]
+WantedBy=multi-user.target

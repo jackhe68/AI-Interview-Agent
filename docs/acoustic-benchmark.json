@@ -1,0 +1,1032 @@
+{
+  "tests": [
+    {
+      "case": "ordinary",
+      "fixture_type": "synthetic speech or generated signal, not human",
+      "asr_text": "你好,我是一名计算机专业的学生。我熟悉数据库和多线程,希望成为一名软件工程师。",
+      "text_source": "actual faster-whisper base",
+      "analysis": {
+        "schema_version": "audio-analysis.v1",
+        "status": "ok",
+        "source": {
+          "original_sample_rate_hz": 16000,
+          "original_channels": 1,
+          "sample_rate_hz": 16000,
+          "audio_sha256": "899015f6ee345648af1e7840c171cf734fc9527dbe2f7d1a8127807fbad09145",
+          "asr_text_sha256": "d1aba2dd1433290c937d3636dce97ab51a26b54ceae913b0cbdebf690524fac5"
+        },
+        "method": {
+          "feature_version": "1.1.0",
+          "vad": "Silero bundled with faster-whisper",
+          "faster_whisper_version": "1.2.1",
+          "vad_parameters": {
+            "threshold": 0.5,
+            "min_speech_duration_ms": 100,
+            "min_silence_duration_ms": 250,
+            "speech_pad_ms": 0
+          },
+          "pause_min_ms": 500,
+          "long_pause_min_ms": 1500,
+          "downmix": "arithmetic_channel_mean",
+          "rms_frame_ms": 25,
+          "rms_hop_ms": 10,
+          "pitch": "YIN-CMNDF (fixed window, FFT)",
+          "pitch_parameters": {
+            "frame_ms": 60,
+            "hop_ms": 20,
+            "fmin_hz": 60,
+            "fmax_hz": 500,
+            "trough_threshold": 0.15,
+            "min_frame_dbfs": -50,
+            "min_coverage": 0.2,
+            "min_valid_frames": 10
+          },
+          "rate_text": "original_asr_hanzi_excluding_punctuation"
+        },
+        "quality": {
+          "flags": [],
+          "clipping_ratio": 0.0,
+          "voiced_frame_coverage": 0.4856
+        },
+        "metrics": {
+          "duration_s": 10.486,
+          "speech_s": 7.84,
+          "speech_ratio": 0.7477,
+          "leading_silence_s": 0.128,
+          "trailing_silence_s": 0.726,
+          "silence_s": 2.646,
+          "pause_count": 1,
+          "pause_total_s": 0.896,
+          "pause_p50_s": 0.896,
+          "pause_mean_s": 0.896,
+          "pause_max_s": 0.896,
+          "long_pause_count": 0,
+          "hanzi_count": 35,
+          "english_word_count": 0,
+          "hanzi_per_min_total": 200.3,
+          "hanzi_per_min_speech": 267.9,
+          "english_words_per_min_speech": null,
+          "rms_linear_mean": 0.04261,
+          "rms_dbfs_mean": -27.41,
+          "rms_dbfs_median": -30.14,
+          "rms_dbfs_iqr": 8.89,
+          "rms_dbfs_p10": -39.12,
+          "rms_dbfs_p90": -21.15,
+          "rms_dbfs_range": 66.53,
+          "f0_hz_median": 205.0,
+          "f0_hz_p10": 162.7,
+          "f0_hz_p90": 275.4,
+          "f0_hz_min": 147.7,
+          "f0_hz_max": 292.8,
+          "f0_hz_range": 145.1,
+          "f0_semitone_iqr": 5.47
+        },
+        "processing_ms": 67.3,
+        "emotion": {
+          "enabled": false,
+          "status": "not_evaluated"
+        },
+        "warnings": [
+          "practice_only_not_scored",
+          "dbfs_is_not_sound_pressure_level"
+        ]
+      }
+    },
+    {
+      "case": "pauses",
+      "fixture_type": "synthetic speech or generated signal, not human",
+      "asr_text": "你好,我是一名计算机专业的学生。我熟悉。以数据库和多线程,希望成为一名软件工程师。",
+      "text_source": "actual faster-whisper base",
+      "analysis": {
+        "schema_version": "audio-analysis.v1",
+        "status": "ok",
+        "source": {
+          "original_sample_rate_hz": 16000,
+          "original_channels": 1,
+          "sample_rate_hz": 16000,
+          "audio_sha256": "a141fd93e9bc7605cbab1de2274a8b646f24bd725d1067d157b5f61e41eaa5fb",
+          "asr_text_sha256": "533e2637de4e98bcfeb8c1693b9a2609fd1116c469e75ca9ca97d0924dac5145"
+        },
+        "method": {
+          "feature_version": "1.1.0",
+          "vad": "Silero bundled with faster-whisper",
+          "faster_whisper_version": "1.2.1",
+          "vad_parameters": {
+            "threshold": 0.5,
+            "min_speech_duration_ms": 100,
+            "min_silence_duration_ms": 250,
+            "speech_pad_ms": 0
+          },
+          "pause_min_ms": 500,
+          "long_pause_min_ms": 1500,
+          "downmix": "arithmetic_channel_mean",
+          "rms_frame_ms": 25,
+          "rms_hop_ms": 10,
+          "pitch": "YIN-CMNDF (fixed window, FFT)",
+          "pitch_parameters": {
+            "frame_ms": 60,
+            "hop_ms": 20,
+            "fmin_hz": 60,
+            "fmax_hz": 500,
+            "trough_threshold": 0.15,
+            "min_frame_dbfs": -50,
+            "min_coverage": 0.2,
+            "min_valid_frames": 10
+          },
+          "rate_text": "original_asr_hanzi_excluding_punctuation"
+        },
+        "quality": {
+          "flags": [],
+          "clipping_ratio": 0.0,
+          "voiced_frame_coverage": 0.4843
+        },
+        "metrics": {
+          "duration_s": 12.486,
+          "speech_s": 7.872,
+          "speech_ratio": 0.6305,
+          "leading_silence_s": 0.128,
+          "trailing_silence_s": 0.742,
+          "silence_s": 4.614,
+          "pause_count": 2,
+          "pause_total_s": 2.88,
+          "pause_p50_s": 1.44,
+          "pause_mean_s": 1.44,
+          "pause_max_s": 1.984,
+          "long_pause_count": 1,
+          "hanzi_count": 36,
+          "english_word_count": 0,
+          "hanzi_per_min_total": 173.0,
+          "hanzi_per_min_speech": 274.4,
+          "english_words_per_min_speech": null,
+          "rms_linear_mean": 0.042307,
+          "rms_dbfs_mean": -27.47,
+          "rms_dbfs_median": -30.2,
+          "rms_dbfs_iqr": 8.91,
+          "rms_dbfs_p10": -39.41,
+          "rms_dbfs_p90": -21.15,
+          "rms_dbfs_range": 228.15,
+          "f0_hz_median": 201.2,
+          "f0_hz_p10": 162.6,
+          "f0_hz_p90": 275.8,
+          "f0_hz_min": 147.7,
+          "f0_hz_max": 293.8,
+          "f0_hz_range": 146.0,
+          "f0_semitone_iqr": 5.52
+        },
+        "processing_ms": 56.6,
+        "emotion": {
+          "enabled": false,
+          "status": "not_evaluated"
+        },
+        "warnings": [
+          "practice_only_not_scored",
+          "dbfs_is_not_sound_pressure_level"
+        ]
+      }
+    },
+    {
+      "case": "silence_60s",
+      "fixture_type": "synthetic speech or generated signal, not human",
+      "asr_text": "",
+      "text_source": "actual faster-whisper base",
+      "analysis": {
+        "schema_version": "audio-analysis.v1",
+        "status": "partial",
+        "source": {
+          "original_sample_rate_hz": 16000,
+          "original_channels": 1,
+          "sample_rate_hz": 16000,
+          "audio_sha256": "4c59ed976769ba50aba4a23ef2823cf795f0b555d48f4c80d41576ce9f3378b7",
+          "asr_text_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "method": {
+          "feature_version": "1.1.0",
+          "vad": "Silero bundled with faster-whisper",
+          "faster_whisper_version": "1.2.1",
+          "vad_parameters": {
+            "threshold": 0.5,
+            "min_speech_duration_ms": 100,
+            "min_silence_duration_ms": 250,
+            "speech_pad_ms": 0
+          },
+          "pause_min_ms": 500,
+          "long_pause_min_ms": 1500,
+          "downmix": "arithmetic_channel_mean",
+          "rms_frame_ms": 25,
+          "rms_hop_ms": 10,
+          "pitch": "YIN-CMNDF (fixed window, FFT)",
+          "pitch_parameters": {
+            "frame_ms": 60,
+            "hop_ms": 20,
+            "fmin_hz": 60,
+            "fmax_hz": 500,
+            "trough_threshold": 0.15,
+            "min_frame_dbfs": -50,
+            "min_coverage": 0.2,
+            "min_valid_frames": 10
+          },
+          "rate_text": "original_asr_hanzi_excluding_punctuation"
+        },
+        "quality": {
+          "flags": [
+            "no_speech"
+          ],
+          "clipping_ratio": 0.0,
+          "voiced_frame_coverage": null
+        },
+        "metrics": {
+          "duration_s": 60.0,
+          "speech_s": 0.0,
+          "speech_ratio": 0.0,
+          "leading_silence_s": null,
+          "trailing_silence_s": null,
+          "silence_s": 60.0,
+          "pause_count": null,
+          "pause_total_s": null,
+          "pause_p50_s": null,
+          "pause_mean_s": null,
+          "pause_max_s": null,
+          "long_pause_count": null,
+          "hanzi_count": 0,
+          "english_word_count": 0,
+          "hanzi_per_min_total": null,
+          "hanzi_per_min_speech": null,
+          "english_words_per_min_speech": null,
+          "rms_linear_mean": null,
+          "rms_dbfs_mean": null,
+          "rms_dbfs_median": null,
+          "rms_dbfs_iqr": null,
+          "rms_dbfs_p10": null,
+          "rms_dbfs_p90": null,
+          "rms_dbfs_range": null,
+          "f0_hz_median": null,
+          "f0_hz_p10": null,
+          "f0_hz_p90": null,
+          "f0_hz_min": null,
+          "f0_hz_max": null,
+          "f0_hz_range": null,
+          "f0_semitone_iqr": null
+        },
+        "processing_ms": 113.5,
+        "emotion": {
+          "enabled": false,
+          "status": "not_evaluated"
+        },
+        "warnings": [
+          "practice_only_not_scored",
+          "dbfs_is_not_sound_pressure_level"
+        ]
+      }
+    },
+    {
+      "case": "noise",
+      "fixture_type": "synthetic speech or generated signal, not human",
+      "asr_text": "很好,我去移移计算机专业的学生。我读习触及配合多线盒。希望穿回移移软线专屑。",
+      "text_source": "actual faster-whisper base",
+      "analysis": {
+        "schema_version": "audio-analysis.v1",
+        "status": "partial",
+        "source": {
+          "original_sample_rate_hz": 16000,
+          "original_channels": 1,
+          "sample_rate_hz": 16000,
+          "audio_sha256": "74e8646ffc5630a6befb379f4869b3b652bdef971ee75fc8275732bce6128b4f",
+          "asr_text_sha256": "164e38b887ba9ed3aaa727015b9100ef56381b75159def52fd0c4f2dc0123c5e"
+        },
+        "method": {
+          "feature_version": "1.1.0",
+          "vad": "Silero bundled with faster-whisper",
+          "faster_whisper_version": "1.2.1",
+          "vad_parameters": {
+            "threshold": 0.5,
+            "min_speech_duration_ms": 100,
+            "min_silence_duration_ms": 250,
+            "speech_pad_ms": 0
+          },
+          "pause_min_ms": 500,
+          "long_pause_min_ms": 1500,
+          "downmix": "arithmetic_channel_mean",
+          "rms_frame_ms": 25,
+          "rms_hop_ms": 10,
+          "pitch": "YIN-CMNDF (fixed window, FFT)",
+          "pitch_parameters": {
+            "frame_ms": 60,
+            "hop_ms": 20,
+            "fmin_hz": 60,
+            "fmax_hz": 500,
+            "trough_threshold": 0.15,
+            "min_frame_dbfs": -50,
+            "min_coverage": 0.2,
+            "min_valid_frames": 10
+          },
+          "rate_text": "original_asr_hanzi_excluding_punctuation"
+        },
+        "quality": {
+          "flags": [
+            "pitch_unreliable"
+          ],
+          "clipping_ratio": 0.0,
+          "voiced_frame_coverage": 0.0
+        },
+        "metrics": {
+          "duration_s": 10.486,
+          "speech_s": 8.224,
+          "speech_ratio": 0.7843,
+          "leading_silence_s": 0.192,
+          "trailing_silence_s": 0.534,
+          "silence_s": 2.262,
+          "pause_count": 1,
+          "pause_total_s": 0.768,
+          "pause_p50_s": 0.768,
+          "pause_mean_s": 0.768,
+          "pause_max_s": 0.768,
+          "long_pause_count": 0,
+          "hanzi_count": 34,
+          "english_word_count": 0,
+          "hanzi_per_min_total": 194.5,
+          "hanzi_per_min_speech": 248.1,
+          "english_words_per_min_speech": null,
+          "rms_linear_mean": 0.094441,
+          "rms_dbfs_mean": -20.5,
+          "rms_dbfs_median": -21.3,
+          "rms_dbfs_iqr": 1.38,
+          "rms_dbfs_p10": -22.02,
+          "rms_dbfs_p90": -18.57,
+          "rms_dbfs_range": 11.33,
+          "f0_hz_median": null,
+          "f0_hz_p10": null,
+          "f0_hz_p90": null,
+          "f0_hz_min": null,
+          "f0_hz_max": null,
+          "f0_hz_range": null,
+          "f0_semitone_iqr": null
+        },
+        "processing_ms": 58.9,
+        "emotion": {
+          "enabled": false,
+          "status": "not_evaluated"
+        },
+        "warnings": [
+          "practice_only_not_scored",
+          "dbfs_is_not_sound_pressure_level"
+        ]
+      }
+    },
+    {
+      "case": "short",
+      "fixture_type": "synthetic speech or generated signal, not human",
+      "asr_text": "",
+      "text_source": "actual faster-whisper base",
+      "analysis": {
+        "schema_version": "audio-analysis.v1",
+        "status": "partial",
+        "source": {
+          "original_sample_rate_hz": 16000,
+          "original_channels": 1,
+          "sample_rate_hz": 16000,
+          "audio_sha256": "bf37d6fd87e23c23bc4a1133d3720cb621843f17e52418b5d8a6c9af431b20b6",
+          "asr_text_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "method": {
+          "feature_version": "1.1.0",
+          "vad": "Silero bundled with faster-whisper",
+          "faster_whisper_version": "1.2.1",
+          "vad_parameters": {
+            "threshold": 0.5,
+            "min_speech_duration_ms": 100,
+            "min_silence_duration_ms": 250,
+            "speech_pad_ms": 0
+          },
+          "pause_min_ms": 500,
+          "long_pause_min_ms": 1500,
+          "downmix": "arithmetic_channel_mean",
+          "rms_frame_ms": 25,
+          "rms_hop_ms": 10,
+          "pitch": "YIN-CMNDF (fixed window, FFT)",
+          "pitch_parameters": {
+            "frame_ms": 60,
+            "hop_ms": 20,
+            "fmin_hz": 60,
+            "fmax_hz": 500,
+            "trough_threshold": 0.15,
+            "min_frame_dbfs": -50,
+            "min_coverage": 0.2,
+            "min_valid_frames": 10
+          },
+          "rate_text": "original_asr_hanzi_excluding_punctuation"
+        },
+        "quality": {
+          "flags": [
+            "too_short",
+            "no_speech"
+          ],
+          "clipping_ratio": 0.0,
+          "voiced_frame_coverage": null
+        },
+        "metrics": {
+          "duration_s": 0.1,
+          "speech_s": 0.0,
+          "speech_ratio": 0.0,
+          "leading_silence_s": null,
+          "trailing_silence_s": null,
+          "silence_s": 0.1,
+          "pause_count": null,
+          "pause_total_s": null,
+          "pause_p50_s": null,
+          "pause_mean_s": null,
+          "pause_max_s": null,
+          "long_pause_count": null,
+          "hanzi_count": 0,
+          "english_word_count": 0,
+          "hanzi_per_min_total": null,
+          "hanzi_per_min_speech": null,
+          "english_words_per_min_speech": null,
+          "rms_linear_mean": null,
+          "rms_dbfs_mean": null,
+          "rms_dbfs_median": null,
+          "rms_dbfs_iqr": null,
+          "rms_dbfs_p10": null,
+          "rms_dbfs_p90": null,
+          "rms_dbfs_range": null,
+          "f0_hz_median": null,
+          "f0_hz_p10": null,
+          "f0_hz_p90": null,
+          "f0_hz_min": null,
+          "f0_hz_max": null,
+          "f0_hz_range": null,
+          "f0_semitone_iqr": null
+        },
+        "processing_ms": 7.8,
+        "emotion": {
+          "enabled": false,
+          "status": "not_evaluated"
+        },
+        "warnings": [
+          "practice_only_not_scored",
+          "dbfs_is_not_sound_pressure_level"
+        ]
+      }
+    },
+    {
+      "case": "low_volume",
+      "fixture_type": "synthetic speech or generated signal, not human",
+      "asr_text": "我是一名计算机专业的学生。我熟悉数据库和多线程,希望成为一名软件工程师。",
+      "text_source": "actual faster-whisper base",
+      "analysis": {
+        "schema_version": "audio-analysis.v1",
+        "status": "partial",
+        "source": {
+          "original_sample_rate_hz": 16000,
+          "original_channels": 1,
+          "sample_rate_hz": 16000,
+          "audio_sha256": "c68a7c97c82dead5af271a9544205b0e8727f20d42b4199a5e1a0143577d463f",
+          "asr_text_sha256": "b76261f0f48f35b0f1297393e64df577bf6a41d2eab9e12b8d5b34f3690a25f6"
+        },
+        "method": {
+          "feature_version": "1.1.0",
+          "vad": "Silero bundled with faster-whisper",
+          "faster_whisper_version": "1.2.1",
+          "vad_parameters": {
+            "threshold": 0.5,
+            "min_speech_duration_ms": 100,
+            "min_silence_duration_ms": 250,
+            "speech_pad_ms": 0
+          },
+          "pause_min_ms": 500,
+          "long_pause_min_ms": 1500,
+          "downmix": "arithmetic_channel_mean",
+          "rms_frame_ms": 25,
+          "rms_hop_ms": 10,
+          "pitch": "YIN-CMNDF (fixed window, FFT)",
+          "pitch_parameters": {
+            "frame_ms": 60,
+            "hop_ms": 20,
+            "fmin_hz": 60,
+            "fmax_hz": 500,
+            "trough_threshold": 0.15,
+            "min_frame_dbfs": -50,
+            "min_coverage": 0.2,
+            "min_valid_frames": 10
+          },
+          "rate_text": "original_asr_hanzi_excluding_punctuation"
+        },
+        "quality": {
+          "flags": [
+            "low_level",
+            "pitch_unreliable"
+          ],
+          "clipping_ratio": 0.0,
+          "voiced_frame_coverage": 0.0
+        },
+        "metrics": {
+          "duration_s": 10.486,
+          "speech_s": 7.488,
+          "speech_ratio": 0.7141,
+          "leading_silence_s": 1.056,
+          "trailing_silence_s": 0.662,
+          "silence_s": 2.998,
+          "pause_count": 1,
+          "pause_total_s": 0.832,
+          "pause_p50_s": 0.832,
+          "pause_mean_s": 0.832,
+          "pause_max_s": 0.832,
+          "long_pause_count": 0,
+          "hanzi_count": 33,
+          "english_word_count": 0,
+          "hanzi_per_min_total": 188.8,
+          "hanzi_per_min_speech": 264.4,
+          "english_words_per_min_speech": null,
+          "rms_linear_mean": 0.000389,
+          "rms_dbfs_mean": -68.2,
+          "rms_dbfs_median": -71.05,
+          "rms_dbfs_iqr": 9.3,
+          "rms_dbfs_p10": -81.89,
+          "rms_dbfs_p90": -61.85,
+          "rms_dbfs_range": 188.18,
+          "f0_hz_median": null,
+          "f0_hz_p10": null,
+          "f0_hz_p90": null,
+          "f0_hz_min": null,
+          "f0_hz_max": null,
+          "f0_hz_range": null,
+          "f0_semitone_iqr": null
+        },
+        "processing_ms": 50.7,
+        "emotion": {
+          "enabled": false,
+          "status": "not_evaluated"
+        },
+        "warnings": [
+          "practice_only_not_scored",
+          "dbfs_is_not_sound_pressure_level"
+        ]
+      }
+    },
+    {
+      "case": "long_120s",
+      "fixture_type": "synthetic speech or generated signal, not human",
+      "asr_text": "",
+      "text_source": "ASR skipped for performance probe; rates unavailable",
+      "analysis": {
+        "schema_version": "audio-analysis.v1",
+        "status": "partial",
+        "source": {
+          "original_sample_rate_hz": 16000,
+          "original_channels": 1,
+          "sample_rate_hz": 16000,
+          "audio_sha256": "af16e31992e6ac4ba8c57e08c05c9968a5993e3b89e7713ee193f695b04e141a",
+          "asr_text_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "method": {
+          "feature_version": "1.1.0",
+          "vad": "Silero bundled with faster-whisper",
+          "faster_whisper_version": "1.2.1",
+          "vad_parameters": {
+            "threshold": 0.5,
+            "min_speech_duration_ms": 100,
+            "min_silence_duration_ms": 250,
+            "speech_pad_ms": 0
+          },
+          "pause_min_ms": 500,
+          "long_pause_min_ms": 1500,
+          "downmix": "arithmetic_channel_mean",
+          "rms_frame_ms": 25,
+          "rms_hop_ms": 10,
+          "pitch": "YIN-CMNDF (fixed window, FFT)",
+          "pitch_parameters": {
+            "frame_ms": 60,
+            "hop_ms": 20,
+            "fmin_hz": 60,
+            "fmax_hz": 500,
+            "trough_threshold": 0.15,
+            "min_frame_dbfs": -50,
+            "min_coverage": 0.2,
+            "min_valid_frames": 10
+          },
+          "rate_text": "original_asr_hanzi_excluding_punctuation"
+        },
+        "quality": {
+          "flags": [
+            "no_hanzi"
+          ],
+          "clipping_ratio": 0.0,
+          "voiced_frame_coverage": 0.4805
+        },
+        "metrics": {
+          "duration_s": 120.0,
+          "speech_s": 89.664,
+          "speech_ratio": 0.7472,
+          "leading_silence_s": 0.128,
+          "trailing_silence_s": 0.0,
+          "silence_s": 30.336,
+          "pause_count": 23,
+          "pause_total_s": 20.288,
+          "pause_p50_s": 0.896,
+          "pause_mean_s": 0.882,
+          "pause_max_s": 0.928,
+          "long_pause_count": 0,
+          "hanzi_count": 0,
+          "english_word_count": 0,
+          "hanzi_per_min_total": null,
+          "hanzi_per_min_speech": null,
+          "english_words_per_min_speech": null,
+          "rms_linear_mean": 0.042664,
+          "rms_dbfs_mean": -27.4,
+          "rms_dbfs_median": -30.11,
+          "rms_dbfs_iqr": 9.01,
+          "rms_dbfs_p10": -39.18,
+          "rms_dbfs_p90": -21.1,
+          "rms_dbfs_range": 73.35,
+          "f0_hz_median": 206.1,
+          "f0_hz_p10": 162.8,
+          "f0_hz_p90": 275.9,
+          "f0_hz_min": 145.5,
+          "f0_hz_max": 295.5,
+          "f0_hz_range": 149.9,
+          "f0_semitone_iqr": 5.54
+        },
+        "processing_ms": 474.1,
+        "emotion": {
+          "enabled": false,
+          "status": "not_evaluated"
+        },
+        "warnings": [
+          "practice_only_not_scored",
+          "dbfs_is_not_sound_pressure_level"
+        ]
+      }
+    },
+    {
+      "case": "noise_only",
+      "fixture_type": "synthetic speech or generated signal, not human",
+      "asr_text": "",
+      "text_source": "actual faster-whisper base",
+      "analysis": {
+        "schema_version": "audio-analysis.v1",
+        "status": "partial",
+        "source": {
+          "original_sample_rate_hz": 16000,
+          "original_channels": 1,
+          "sample_rate_hz": 16000,
+          "audio_sha256": "a6be2f1d6201fabf7c5d8e131522dbda05ac19fcca08eb653a930a676cb45f3f",
+          "asr_text_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "method": {
+          "feature_version": "1.1.0",
+          "vad": "Silero bundled with faster-whisper",
+          "faster_whisper_version": "1.2.1",
+          "vad_parameters": {
+            "threshold": 0.5,
+            "min_speech_duration_ms": 100,
+            "min_silence_duration_ms": 250,
+            "speech_pad_ms": 0
+          },
+          "pause_min_ms": 500,
+          "long_pause_min_ms": 1500,
+          "downmix": "arithmetic_channel_mean",
+          "rms_frame_ms": 25,
+          "rms_hop_ms": 10,
+          "pitch": "YIN-CMNDF (fixed window, FFT)",
+          "pitch_parameters": {
+            "frame_ms": 60,
+            "hop_ms": 20,
+            "fmin_hz": 60,
+            "fmax_hz": 500,
+            "trough_threshold": 0.15,
+            "min_frame_dbfs": -50,
+            "min_coverage": 0.2,
+            "min_valid_frames": 10
+          },
+          "rate_text": "original_asr_hanzi_excluding_punctuation"
+        },
+        "quality": {
+          "flags": [
+            "no_speech"
+          ],
+          "clipping_ratio": 0.0,
+          "voiced_frame_coverage": null
+        },
+        "metrics": {
+          "duration_s": 10.0,
+          "speech_s": 0.0,
+          "speech_ratio": 0.0,
+          "leading_silence_s": null,
+          "trailing_silence_s": null,
+          "silence_s": 10.0,
+          "pause_count": null,
+          "pause_total_s": null,
+          "pause_p50_s": null,
+          "pause_mean_s": null,
+          "pause_max_s": null,
+          "long_pause_count": null,
+          "hanzi_count": 0,
+          "english_word_count": 0,
+          "hanzi_per_min_total": null,
+          "hanzi_per_min_speech": null,
+          "english_words_per_min_speech": null,
+          "rms_linear_mean": null,
+          "rms_dbfs_mean": null,
+          "rms_dbfs_median": null,
+          "rms_dbfs_iqr": null,
+          "rms_dbfs_p10": null,
+          "rms_dbfs_p90": null,
+          "rms_dbfs_range": null,
+          "f0_hz_median": null,
+          "f0_hz_p10": null,
+          "f0_hz_p90": null,
+          "f0_hz_min": null,
+          "f0_hz_max": null,
+          "f0_hz_range": null,
+          "f0_semitone_iqr": null
+        },
+        "processing_ms": 32.2,
+        "emotion": {
+          "enabled": false,
+          "status": "not_evaluated"
+        },
+        "warnings": [
+          "practice_only_not_scored",
+          "dbfs_is_not_sound_pressure_level"
+        ]
+      }
+    },
+    {
+      "case": "mixed",
+      "fixture_type": "synthetic speech or generated signal, not human",
+      "asr_text": "或熟悉 JavaScript, MySQL和Python。或在项目中使用Redis 环存提高接口性能。",
+      "text_source": "actual faster-whisper base",
+      "analysis": {
+        "schema_version": "audio-analysis.v1",
+        "status": "ok",
+        "source": {
+          "original_sample_rate_hz": 16000,
+          "original_channels": 1,
+          "sample_rate_hz": 16000,
+          "audio_sha256": "cc69bb2aec7330398184e7c8304cbef1cd5c0129a83be93daaeed9226763fd47",
+          "asr_text_sha256": "5077fe33f1eaf5cb376a19c162e41124f8040009532fd41533ee77a4ac582e5b"
+        },
+        "method": {
+          "feature_version": "1.1.0",
+          "vad": "Silero bundled with faster-whisper",
+          "faster_whisper_version": "1.2.1",
+          "vad_parameters": {
+            "threshold": 0.5,
+            "min_speech_duration_ms": 100,
+            "min_silence_duration_ms": 250,
+            "speech_pad_ms": 0
+          },
+          "pause_min_ms": 500,
+          "long_pause_min_ms": 1500,
+          "downmix": "arithmetic_channel_mean",
+          "rms_frame_ms": 25,
+          "rms_hop_ms": 10,
+          "pitch": "YIN-CMNDF (fixed window, FFT)",
+          "pitch_parameters": {
+            "frame_ms": 60,
+            "hop_ms": 20,
+            "fmin_hz": 60,
+            "fmax_hz": 500,
+            "trough_threshold": 0.15,
+            "min_frame_dbfs": -50,
+            "min_coverage": 0.2,
+            "min_valid_frames": 10
+          },
+          "rate_text": "original_asr_hanzi_excluding_punctuation"
+        },
+        "quality": {
+          "flags": [],
+          "clipping_ratio": 0.0,
+          "voiced_frame_coverage": 0.4766
+        },
+        "metrics": {
+          "duration_s": 9.157,
+          "speech_s": 7.36,
+          "speech_ratio": 0.8038,
+          "leading_silence_s": 0.16,
+          "trailing_silence_s": 0.741,
+          "silence_s": 1.797,
+          "pause_count": 1,
+          "pause_total_s": 0.896,
+          "pause_p50_s": 0.896,
+          "pause_mean_s": 0.896,
+          "pause_max_s": 0.896,
+          "long_pause_count": 0,
+          "hanzi_count": 19,
+          "english_word_count": 4,
+          "hanzi_per_min_total": 124.5,
+          "hanzi_per_min_speech": 154.9,
+          "english_words_per_min_speech": 32.6,
+          "rms_linear_mean": 0.043675,
+          "rms_dbfs_mean": -27.2,
+          "rms_dbfs_median": -30.76,
+          "rms_dbfs_iqr": 13.42,
+          "rms_dbfs_p10": -46.93,
+          "rms_dbfs_p90": -20.16,
+          "rms_dbfs_range": 68.11,
+          "f0_hz_median": 200.7,
+          "f0_hz_p10": 162.3,
+          "f0_hz_p90": 233.5,
+          "f0_hz_min": 131.2,
+          "f0_hz_max": 285.2,
+          "f0_hz_range": 154.0,
+          "f0_semitone_iqr": 2.98
+        },
+        "processing_ms": 45.5,
+        "emotion": {
+          "enabled": false,
+          "status": "not_evaluated"
+        },
+        "warnings": [
+          "practice_only_not_scored",
+          "dbfs_is_not_sound_pressure_level"
+        ]
+      }
+    },
+    {
+      "case": "fast",
+      "fixture_type": "synthetic speech or generated signal, not human",
+      "asr_text": "你好,我是一名计算机专业的学生。我熟悉数据库和多线程,希望成为一名软件工程师。",
+      "text_source": "actual faster-whisper base",
+      "analysis": {
+        "schema_version": "audio-analysis.v1",
+        "status": "ok",
+        "source": {
+          "original_sample_rate_hz": 16000,
+          "original_channels": 1,
+          "sample_rate_hz": 16000,
+          "audio_sha256": "b7baa30831d74dea9b80b2f0bd549a6ef0c28c80342aba22525568a94f7b0118",
+          "asr_text_sha256": "d1aba2dd1433290c937d3636dce97ab51a26b54ceae913b0cbdebf690524fac5"
+        },
+        "method": {
+          "feature_version": "1.1.0",
+          "vad": "Silero bundled with faster-whisper",
+          "faster_whisper_version": "1.2.1",
+          "vad_parameters": {
+            "threshold": 0.5,
+            "min_speech_duration_ms": 100,
+            "min_silence_duration_ms": 250,
+            "speech_pad_ms": 0
+          },
+          "pause_min_ms": 500,
+          "long_pause_min_ms": 1500,
+          "downmix": "arithmetic_channel_mean",
+          "rms_frame_ms": 25,
+          "rms_hop_ms": 10,
+          "pitch": "YIN-CMNDF (fixed window, FFT)",
+          "pitch_parameters": {
+            "frame_ms": 60,
+            "hop_ms": 20,
+            "fmin_hz": 60,
+            "fmax_hz": 500,
+            "trough_threshold": 0.15,
+            "min_frame_dbfs": -50,
+            "min_coverage": 0.2,
+            "min_valid_frames": 10
+          },
+          "rate_text": "original_asr_hanzi_excluding_punctuation"
+        },
+        "quality": {
+          "flags": [],
+          "clipping_ratio": 0.0,
+          "voiced_frame_coverage": 0.3905
+        },
+        "metrics": {
+          "duration_s": 7.567,
+          "speech_s": 5.696,
+          "speech_ratio": 0.7528,
+          "leading_silence_s": 0.096,
+          "trailing_silence_s": 0.527,
+          "silence_s": 1.871,
+          "pause_count": 1,
+          "pause_total_s": 0.64,
+          "pause_p50_s": 0.64,
+          "pause_mean_s": 0.64,
+          "pause_max_s": 0.64,
+          "long_pause_count": 0,
+          "hanzi_count": 35,
+          "english_word_count": 0,
+          "hanzi_per_min_total": 277.5,
+          "hanzi_per_min_speech": 368.7,
+          "english_words_per_min_speech": null,
+          "rms_linear_mean": 0.042498,
+          "rms_dbfs_mean": -27.43,
+          "rms_dbfs_median": -29.83,
+          "rms_dbfs_iqr": 8.74,
+          "rms_dbfs_p10": -38.56,
+          "rms_dbfs_p90": -21.37,
+          "rms_dbfs_range": 63.66,
+          "f0_hz_median": 217.7,
+          "f0_hz_p10": 164.2,
+          "f0_hz_p90": 277.0,
+          "f0_hz_min": 148.2,
+          "f0_hz_max": 292.9,
+          "f0_hz_range": 144.7,
+          "f0_semitone_iqr": 5.55
+        },
+        "processing_ms": 36.7,
+        "emotion": {
+          "enabled": false,
+          "status": "not_evaluated"
+        },
+        "warnings": [
+          "practice_only_not_scored",
+          "dbfs_is_not_sound_pressure_level"
+        ]
+      }
+    },
+    {
+      "case": "slow",
+      "fixture_type": "synthetic speech or generated signal, not human",
+      "asr_text": "你好,我是一名计算机专业的学生。我熟悉数据库和多线程,希望成为一名软件工程师。",
+      "text_source": "actual faster-whisper base",
+      "analysis": {
+        "schema_version": "audio-analysis.v1",
+        "status": "ok",
+        "source": {
+          "original_sample_rate_hz": 16000,
+          "original_channels": 1,
+          "sample_rate_hz": 16000,
+          "audio_sha256": "ec95e00b11df34c01d6d6d84bf319faf7576a129b4351e221b23e473ea835717",
+          "asr_text_sha256": "d1aba2dd1433290c937d3636dce97ab51a26b54ceae913b0cbdebf690524fac5"
+        },
+        "method": {
+          "feature_version": "1.1.0",
+          "vad": "Silero bundled with faster-whisper",
+          "faster_whisper_version": "1.2.1",
+          "vad_parameters": {
+            "threshold": 0.5,
+            "min_speech_duration_ms": 100,
+            "min_silence_duration_ms": 250,
+            "speech_pad_ms": 0
+          },
+          "pause_min_ms": 500,
+          "long_pause_min_ms": 1500,
+          "downmix": "arithmetic_channel_mean",
+          "rms_frame_ms": 25,
+          "rms_hop_ms": 10,
+          "pitch": "YIN-CMNDF (fixed window, FFT)",
+          "pitch_parameters": {
+            "frame_ms": 60,
+            "hop_ms": 20,
+            "fmin_hz": 60,
+            "fmax_hz": 500,
+            "trough_threshold": 0.15,
+            "min_frame_dbfs": -50,
+            "min_coverage": 0.2,
+            "min_valid_frames": 10
+          },
+          "rate_text": "original_asr_hanzi_excluding_punctuation"
+        },
+        "quality": {
+          "flags": [],
+          "clipping_ratio": 0.0,
+          "voiced_frame_coverage": 0.5677
+        },
+        "metrics": {
+          "duration_s": 14.56,
+          "speech_s": 10.848,
+          "speech_ratio": 0.7451,
+          "leading_silence_s": 0.16,
+          "trailing_silence_s": 1.056,
+          "silence_s": 3.712,
+          "pause_count": 3,
+          "pause_total_s": 2.496,
+          "pause_p50_s": 0.608,
+          "pause_mean_s": 0.832,
+          "pause_max_s": 1.28,
+          "long_pause_count": 0,
+          "hanzi_count": 35,
+          "english_word_count": 0,
+          "hanzi_per_min_total": 144.2,
+          "hanzi_per_min_speech": 193.6,
+          "english_words_per_min_speech": null,
+          "rms_linear_mean": 0.042214,
+          "rms_dbfs_mean": -27.49,
+          "rms_dbfs_median": -30.3,
+          "rms_dbfs_iqr": 9.25,
+          "rms_dbfs_p10": -39.67,
+          "rms_dbfs_p90": -21.15,
+          "rms_dbfs_range": 59.82,
+          "f0_hz_median": 199.3,
+          "f0_hz_p10": 161.6,
+          "f0_hz_p90": 274.9,
+          "f0_hz_min": 140.4,
+          "f0_hz_max": 293.8,
+          "f0_hz_range": 153.4,
+          "f0_semitone_iqr": 5.63
+        },
+        "processing_ms": 63.5,
+        "emotion": {
+          "enabled": false,
+          "status": "not_evaluated"
+        },
+        "warnings": [
+          "practice_only_not_scored",
+          "dbfs_is_not_sound_pressure_level"
+        ]
+      }
+    }
+  ],
+  "peak_working_set_mb": 370.6,
+  "note": "No human audio available. Fast/slow fixtures generated by SAPI speaking rate; noise/pauses/gain explicitly modified."
+}

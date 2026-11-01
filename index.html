@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Interview Agent · AI 模拟面试系统</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+  <link rel="stylesheet" href="/static/css/home.css?v=major-path-20261101">
+</head>
+<body class="home-page">
+  <div class="bg-fx"></div>
+
+  <!-- 顶部导航 -->
+  <header class="nav">
+    <div class="container nav__inner">
+      <a class="nav__logo" href="/">
+        <span class="nav__logo-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2a4 4 0 0 1 4 4v5a4 4 0 0 1-8 0V6a4 4 0 0 1 4-4z"/>
+            <path d="M5 10v1a7 7 0 0 0 14 0v-1"/>
+            <path d="M12 18v4"/>
+          </svg>
+        </span>
+        AI Interview Agent
+      </a>
+      <nav class="nav__links">
+        <a class="nav__link is-active" href="#top">首页</a>
+        <a class="nav__link" href="#config">面试配置</a>
+        <a class="nav__link" href="#features">产品特性</a>
+        <a class="nav__link" href="/history">历史面试</a>
+        <a class="nav__link btn btn--ghost btn--sm" href="#config">开始面试</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="top">
+    <section class="hero">
+      <div class="container hero__grid">
+        <div>
+          <div class="badge hero__badge"><span class="dot"></span>为不同专业，找到合适的练习方向</div>
+          <h1 class="hero__title">从你的专业出发<br><span class="grad">练好下一场面试</span></h1>
+          <p class="hero__desc">选专业、定岗位，从一次真实作答开始。用具体点评、参考回答和重答任务，把每次练习变成下一次的准备。</p>
+          <div class="home-hero-actions">
+            <a class="btn btn--primary btn--lg" href="#config">选择练习方向 <span aria-hidden="true">↗</span></a>
+            <a class="home-history-link" href="/history">查看我的练习记录 →</a>
+          </div>
+          <div class="home-facts"><span>6 大学科</span><span>{{ interview_catalog.major_count }} 个专业</span><span>八维复盘</span><span>PDF 带走练习</span></div>
+        </div>
+        <aside class="home-preview" aria-label="练习流程">
+          <div class="home-preview-heading"><span class="home-live-dot"></span>为下一次面试做准备</div>
+          <div class="home-preview-title">每一步，都有具体反馈</div>
+          <ol class="home-journey">
+            <li><span>01</span><div><b>选一个贴近你的方向</b><p>从专业找岗位，也可以直接选目标岗位。</p></div></li>
+            <li><span>02</span><div><b>说出你自己的回答</b><p>3 个主问题，结合回答继续追问。</p></div></li>
+            <li><span>03</span><div><b>带着方法，再练一次</b><p>看薄弱点、参考回答与重答自查条件。</p></div></li>
+          </ol>
+          <div class="home-preview-note">允许不完美的回答，从这里开始进步。</div>
+        </aside>
+      </div>
+    </section>
+
+    <!-- 面试配置 -->
+    <section class="config" id="config">
+      <div class="container">
+        <div class="section-head fade-up">
+          <h2>选好方向，开始练习</h2>
+          <p>按专业找到推荐岗位，或直接选择已经确定的目标岗位。</p>
+        </div>
+
+        <div class="glass-card config__card fade-up fade-up--1" id="configCard">
+          <div class="config__group direction-group">
+            <div class="config__label"><span class="step-no">1</span>选择练习方向</div>
+            <div class="entry-modes" role="group" aria-label="选择岗位查找方式">
+              <button class="entry-mode is-selected" type="button" data-mode="major" aria-pressed="true"><b>按专业找岗位</b><span>还在探索方向，从专业开始</span></button>
+              <button class="entry-mode" type="button" data-mode="direct" aria-pressed="false"><b>直接选岗位</b><span>已有目标，保留原有快捷入口</span></button>
+            </div>
+            <div id="majorPath" class="major-path">
+              <div class="path-label">先选学科</div>
+              <div class="discipline-grid" id="disciplineGrid" role="group" aria-label="练习学科"></div>
+              <div class="major-controls">
+                <label>筛选专业 <span class="optional-mark">选填</span><input id="majorSearch" type="search" placeholder="输入专业名或学院名" autocomplete="off" disabled></label>
+                <label>再选专业<select id="majorSelect" disabled><option value="">请先选择学科</option></select></label>
+              </div>
+              <p class="selection-help" id="majorHelp">选择的是本次练习方向，不限定你的真实专业；可以自由切换。</p>
+            </div>
+            <div class="role-heading"><div class="path-label" id="roleHeading">最后选岗位</div><span id="roleHint" class="selection-help">先选专业，查看推荐方向。</span></div>
+            <div class="job-grid" id="jobGrid"></div>
+            <div class="selection-preview" aria-live="polite"><span>本场练习</span><b id="pathLabel">请选择一个练习方向</b><p id="roleFocus">选择岗位后，这里会显示本场的重点练习内容。</p></div>
+          </div>
+
+          <!-- 难度 -->
+          <div class="config__group">
+            <div class="config__label"><span class="step-no">2</span>选择面试难度<span class="hint">（难度影响题目深度与追问强度）</span></div>
+            <div class="seg-row" id="levelRow">
+              <div class="seg" data-level="实习入门" data-desc="基础概念为主，适合低年级">
+                <div>
+                  <div class="seg__level">实习入门</div>
+                  <div class="seg__desc">基础知识 · 适合首次练习</div>
+                </div>
+                <div class="seg__meter"><i class="on"></i><i></i><i></i><i></i></div>
+              </div>
+              <div class="seg" data-level="校招标准" data-desc="对标大厂校招笔试面试">
+                <div>
+                  <div class="seg__level">校招标准</div>
+                  <div class="seg__desc">核心知识 · 课程与实践案例</div>
+                </div>
+                <div class="seg__meter"><i class="on"></i><i class="on"></i><i></i><i></i></div>
+              </div>
+              <div class="seg" data-level="社招进阶" data-desc="深挖原理与系统设计">
+                <div>
+                  <div class="seg__level">社招进阶</div>
+                  <div class="seg__desc">专业深挖 · 场景与方案分析</div>
+                </div>
+                <div class="seg__meter"><i class="on"></i><i class="on"></i><i class="on"></i><i></i></div>
+              </div>
+              <div class="seg" data-level="大厂冲刺" data-desc="高压追问，全真模拟">
+                <div>
+                  <div class="seg__level">大厂冲刺</div>
+                  <div class="seg__desc">复杂场景 · 追问与取舍</div>
+                </div>
+                <div class="seg__meter"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 面试流程说明（第二阶段固定流程） -->
+          <div class="config__group">
+            <div class="config__label"><span class="step-no">3</span>面试流程<span class="hint">（文字或语音作答）</span></div>
+            <div class="chip-row">
+              <span class="chip" style="cursor:default;">3 道主问题</span>
+              <span class="chip" style="cursor:default;">每题最多 1 次针对性追问</span>
+              <span class="chip" style="cursor:default;">支持提前结束</span>
+              <span class="chip" style="cursor:default;">AI 逐题点评</span>
+            </div>
+          </div>
+
+          <div class="config__group background-group" id="candidateBackground">
+            <label class="background-toggle" for="backgroundEnabled">
+              <input type="checkbox" id="backgroundEnabled">
+              <span>个人背景与简历 <small>（选填，可直接跳过）</small></span>
+            </label>
+            <p class="background-help">提供与求职相关的经历，AI 会据此选择问题和追问；不填写则按岗位与难度进行标准面试。</p>
+            <div id="backgroundFields" class="is-hidden">
+              <div class="background-grid">
+                <label>专业／学习背景<input id="bgMajor" type="text" maxlength="120" autocomplete="off" placeholder="例如：软件工程，学过数据库与操作系统"></label>
+                <label>当前阶段<input id="bgStage" type="text" maxlength="80" autocomplete="off" placeholder="例如：大三，准备申请实习"></label>
+                <label class="background-wide">掌握的技能<textarea id="bgSkills" maxlength="600" rows="2" autocomplete="off" placeholder="例如：Java、Spring Boot、MySQL、Redis；可说明熟悉程度"></textarea></label>
+                <label class="background-wide">项目经历<textarea id="bgProjects" maxlength="1500" rows="3" autocomplete="off" placeholder="项目做什么、你负责什么、使用了哪些技术、遇到了什么问题"></textarea></label>
+                <label class="background-wide">实习／实践经历<textarea id="bgInternships" maxlength="1000" rows="2" autocomplete="off" placeholder="可写课程实践、比赛或实习任务，无需填写单位的敏感信息"></textarea></label>
+                <label class="background-wide">希望重点练习的内容<textarea id="bgFocus" maxlength="400" rows="2" autocomplete="off" placeholder="例如：围绕缓存设计追问，帮助我练习解释技术选择"></textarea></label>
+                <label class="background-wide">也可以粘贴简历文字<textarea id="bgResume" maxlength="2000" rows="4" autocomplete="off" placeholder="仅粘贴职业相关内容；请先删除姓名、手机号、邮箱、身份证号和详细住址"></textarea></label>
+              </div>
+              <p class="background-help">无需填写真实姓名或联系方式。系统会检查常见手机号、邮箱和身份证号，但不能识别所有个人信息，请提交前自行检查。</p>
+              <label class="background-consent"><input type="checkbox" id="backgroundConsent"><span>我已阅读下方说明，同意将本次填写的背景发送至 DeepSeek，用于本场面试出题与追问。</span></label>
+              <button class="btn btn--ghost btn--sm" id="clearBackgroundBtn" type="button">清空背景并跳过</button>
+            </div>
+            <details class="background-privacy" id="backgroundPrivacy">
+              <summary>信息使用与删除说明</summary>
+              <p>背景信息是可选项，仅用于本场问题与追问，不直接作为评分依据。相关文字会发送至 DeepSeek；本网站清除数据无法撤回已发送的内容。</p>
+              <p>填写的原始背景表单不会保存到浏览器本地存储；恢复面试所用的当前题目可能引用相关经历。服务器在本场结束或点击“清除本场背景”后删除独立背景资料；未结束的背景最多使用24小时，过期立即停止使用，服务运行期间每5分钟检查并清理过期背景。</p>
+              <p>已生成的问题、你提交的回答和报告可能包含相关经历，会随面试记录保留。你可以在“历史面试”中删除整场记录及其关联资料。清除背景不会改写已发生的对话或已发出的请求。</p>
+              <p>当前公网试用按浏览器隔离历史记录，尚未提供账号登录。请使用同一浏览器和网址管理记录；更换浏览器或网址后，可能无法找回原记录。</p>
+            </details>
+          </div>
+
+          <!-- 开始 -->
+          <div class="config__start">
+            <div class="config__summary">
+              已选择：<b id="summaryText">尚未选择岗位，请先完成上方配置</b>
+            </div>
+            <button class="btn btn--primary btn--lg" id="startBtn" disabled>
+              开始面试
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 特性 -->
+    <section class="features" id="features">
+      <div class="container">
+        <div class="section-head fade-up">
+          <h2>为什么选择 AI Interview Agent</h2>
+          <p>像真实面试官一样提问、追问、评估</p>
+        </div>
+        <div class="feature-grid">
+          <div class="glass-card feature-card fade-up">
+            <div class="f-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a4 4 0 0 1 4 4v5a4 4 0 0 1-8 0V6a4 4 0 0 1 4-4z"/><path d="M5 10v1a7 7 0 0 0 14 0v-1"/><path d="M12 18v4"/></svg>
+            </div>
+            <h3>真实语音交互</h3>
+            <p>语音提问与作答，配合文字辅助输入，贴近真实对话式面试体验。</p>
+          </div>
+          <div class="glass-card feature-card fade-up fade-up--1">
+            <div class="f-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M8 9h8"/><path d="M8 13h5"/></svg>
+            </div>
+            <h3>AI 智能追问</h3>
+            <p>围绕你刚才的回答继续追问，练习解释细节、分析场景与说明选择。</p>
+          </div>
+          <div class="glass-card feature-card fade-up fade-up--2">
+            <div class="f-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6"/></svg>
+            </div>
+            <h3>多维能力报告</h3>
+            <p>综合评分、知识雷达、语速停顿分析、薄弱点定位与针对性改进建议。</p>
+          </div>
+          <div class="glass-card feature-card fade-up fade-up--3">
+            <div class="f-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3 6.5 7 .9-5 4.8 1.2 7-6.2-3.4L5.8 21 7 14.2 2 9.4l7-.9z"/></svg>
+            </div>
+            <h3>多专业岗位方向</h3>
+            <p>文学、经济、教育、管理、工学与艺术，从专业找到推荐岗位，也能直接选择原有岗位。</p>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="container" style="display:flex; justify-content:space-between; flex-wrap:wrap; gap:12px;">
+      <span>© 2026 AI Interview Agent · 大学生求职 AI 模拟面试系统</span>
+      <span>不同专业，各有自己的练习方向</span>
+      <a href="#backgroundPrivacy">信息使用与删除说明</a>
+    </div>
+  </footer>
+
+  <div class="toast" id="toast"></div>
+  <script id="interviewCatalog" type="application/json">{{ interview_catalog | tojson }}</script>
+  <script src="/static/js/main.js?v=major-path-20261101"></script>
+</body>
+</html>

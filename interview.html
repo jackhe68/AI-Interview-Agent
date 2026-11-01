@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI 语音面试 · AI Interview Agent</title>
+  <link rel="stylesheet" href="/static/css/style.css?v=draft-recovery-20261101">
+</head>
+<body>
+  <div class="bg-fx"></div>
+
+  <!-- 顶部导航 -->
+  <header class="nav">
+    <div class="container nav__inner">
+      <a class="nav__logo" href="/">
+        <span class="nav__logo-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2a4 4 0 0 1 4 4v5a4 4 0 0 1-8 0V6a4 4 0 0 1 4-4z"/>
+            <path d="M5 10v1a7 7 0 0 0 14 0v-1"/>
+            <path d="M12 18v4"/>
+          </svg>
+        </span>
+        AI Interview Agent
+      </a>
+      <nav class="nav__links">
+        <a class="nav__link" href="/">返回首页</a>
+        <a class="nav__link" href="/history">历史面试</a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- 面试进度条 -->
+  <div class="iv-topbar">
+    <div class="container iv-topbar__inner">
+      <div class="badge"><span class="dot"></span><span id="jobBadge">Java 后端</span></div>
+      <div class="iv-progress">
+        <div class="iv-progress__meta">
+          <span>面试进度 · <b id="qNow">1</b> / <b id="qTotal">8</b> 题</span>
+          <span id="progressPhase">准备开始</span>
+        </div>
+        <div class="iv-progress__track">
+          <div class="iv-progress__fill" id="progressFill"></div>
+        </div>
+      </div>
+      <div class="iv-timer">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+        <span id="timerText">00:00</span>
+      </div>
+      <button class="btn btn--danger btn--sm" id="endBtn">结束面试</button>
+    </div>
+  </div>
+
+  <!-- 面试主区 -->
+  <main class="container iv-main" id="ivStage" data-state="idle">
+    <div class="background-session is-hidden" id="backgroundSession">
+      <span>已启用个人背景出题</span>
+      <button class="btn btn--ghost btn--sm" id="clearSessionBackgroundBtn" type="button">清除本场背景</button>
+      <small>清除后新提问不再附带背景；已有问题与回答仍随面试记录保留。</small>
+    </div>
+
+    <!-- 左列：问题 + AI 反馈 + 文字输入 -->
+    <div class="iv-left">
+      <section class="glass-card question-card">
+        <div class="question-card__head">
+          <div class="question-card__no">当前问题 <b id="qIndex">01</b></div>
+          <div class="badge" id="qLevelBadge">校招标准</div>
+        </div>
+        <div class="question-card__text" id="questionText">
+          正在加载第一道面试题…
+        </div>
+        <div class="question-card__tts">
+          <span class="eq"><i></i><i></i><i></i><i></i></span>
+          <span id="ttsHint" role="status" aria-live="polite">AI 面试官实时生成（DeepSeek）</span>
+        </div>
+      </section>
+
+      <section class="glass-card ai-feedback is-hidden" id="aiFeedback">
+        <div class="ai-feedback__head">
+            <span>上一题点评与改进建议</span>
+          <span class="tag" id="feedbackTag">追问</span>
+        </div>
+        <div class="ai-feedback__body" id="feedbackBody"></div>
+      </section>
+      <section class="glass-card completion-card is-hidden" id="completionCard">
+        <h3>本场作答已完成</h3>
+        <p>最后一题的点评已保留在上方。看完建议后，再手动进入面试报告。</p>
+        <button class="btn btn--primary" id="viewReportBtn" type="button">结束面试并查看报告</button>
+      </section>
+
+      <section class="glass-card voice-card" id="voiceCard">
+        <div class="voice-card__head">
+          <span>🎙️ 语音作答</span>
+          <span class="voice-card__hint" id="voiceHint">点击右侧麦克风开始录音（最长 120 秒）</span>
+        </div>
+        <div class="voice-actions">
+          <label class="voice-card__hint"><input id="includeAnalysis" type="checkbox" checked> 基础音频分析（提交回答后关联报告，不计分）</label>
+        </div>
+        <div class="voice-controls is-hidden" id="voiceControls">
+          <div class="voice-player-row">
+            <audio id="voicePlayer" controls></audio>
+            <span class="badge" id="voiceDur">—</span>
+          </div>
+          <div class="voice-actions">
+            <button class="btn btn--ghost btn--sm" id="redoBtn" type="button">重新录音</button>
+            <button class="btn btn--primary btn--sm" id="transcribeBtn" type="button">重新识别</button>
+          </div>
+          <div class="voice-transcribe-status is-hidden" id="transcribeStatus" role="status" aria-live="polite"></div>
+          <details class="voice-transcribe-status is-hidden" id="audioAnalysis">
+            <summary>本段录音指标 · 练习参考</summary>
+            <p id="audioAnalysisMetrics"></p>
+            <p id="audioAnalysisQuality"></p>
+            <button class="btn btn--ghost btn--sm" id="unlinkAnalysisBtn" type="button">不关联本段指标</button>
+            <small>基于原始录音与识别文字，编辑回答不会重算。音量受麦克风增益影响；音高仅统计可靠有声帧。不参与面试评分。</small>
+          </details>
+        </div>
+      </section>
+
+      <section class="glass-card text-input-card">
+        <div class="text-input-card__head">
+          <span>✍️ 回答内容（可文字输入或语音转写后编辑）</span>
+          <span style="color:var(--text-3); font-size:12px;">Ctrl/⌘ + Enter 快速提交</span>
+        </div>
+        <div class="text-input-row">
+          <textarea id="answerInput" placeholder="在此输入你的回答，或停止录音后自动识别填入，可编辑修正后提交…"></textarea>
+          <div class="draft-controls">
+            <p id="draftStatus" role="status" aria-live="polite">草稿仅保存在当前浏览器，保留24小时；录音文件不保存。</p>
+            <button class="btn btn--ghost btn--sm" id="clearDraftBtn" type="button">清空草稿</button>
+            <button class="btn btn--outline btn--sm" id="recoverStateBtn" type="button">恢复当前题目</button>
+          </div>
+          <details class="draft-previous is-hidden" id="previousDraft"><summary>查看上一题保留的未提交文字</summary><pre id="previousDraftText"></pre></details>
+          <button class="btn btn--primary" id="submitAnswerBtn" style="align-self:flex-end;">提交回答</button>
+        </div>
+      </section>
+    </div>
+
+    <!-- 右列：光球舞台 -->
+    <section class="glass-card iv-stage">
+      <!-- AI 光球 -->
+      <div class="orb">
+        <div class="orb__halo"></div>
+        <div class="orb__ring"></div>
+        <div class="orb__ring orb__ring--outer"></div>
+        <div class="orb__dashed"></div>
+        <div class="orb__core"><span class="orb__emoji" id="orbEmoji">🎙️</span></div>
+      </div>
+
+      <!-- 声波动画 -->
+      <div class="wave" id="wave"></div>
+
+      <!-- 状态文本 -->
+      <div class="iv-state-text">
+        <span class="pulse-dot"></span>
+        <span id="stateText">请在下方文字框输入你的回答</span>
+      </div>
+
+      <!-- 控制 -->
+      <div class="iv-controls">
+        <div class="ctl-side">
+          <button class="btn btn--ghost btn--sm" id="replayBtn" type="button" aria-pressed="false">🔊 朗读问题</button>
+          <button class="btn btn--ghost btn--sm" id="skipBtn">⏭ 跳过此题</button>
+        </div>
+        <button class="mic-btn" id="micBtn" title="点击开始录音，再次点击停止" aria-label="麦克风">
+          <span class="mic-ring"></span>
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" id="micIcon">
+            <path d="M12 2a3 3 0 0 1 3 3v6a3 3 0 0 1-6 0V5a3 3 0 0 1 3-3z"/>
+            <path d="M19 10v1a7 7 0 0 1-14 0v-1"/>
+            <path d="M12 18v4"/>
+            <path d="M8 22h8"/>
+          </svg>
+        </button>
+        <div class="ctl-side">
+          <div class="badge" style="justify-content:center;">录音 <b id="recTime" style="color:var(--accent); margin-left:4px;">00:00</b></div>
+          <div class="badge" style="justify-content:center;">已答 <b id="answeredCount" style="margin-left:4px;">0</b> 题</div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- 结束确认弹窗 -->
+  <div class="modal-mask" id="endModal">
+    <div class="glass-card modal">
+      <h3>结束本场面试？</h3>
+      <p>结束后将根据已完成的作答生成面试报告。尚未提交的文字不会计入评分，确认结束后会清除此场的本机草稿。</p>
+      <div class="modal__actions">
+        <button class="btn btn--ghost" id="cancelEndBtn">继续面试</button>
+        <button class="btn btn--primary" id="confirmEndBtn">结束并查看报告</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+  <script src="/static/js/main.js"></script>
+  <script src="/static/js/drafts.js?v=draft-recovery-20261101"></script>
+  <script src="/static/js/interview.js?v=draft-recovery-20261101"></script>
+</body>
+</html>

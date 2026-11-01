@@ -1,0 +1,15 @@
+# 生产环境运行时依赖（从本地 .venv 实测版本锁定）
+# 已剔除：streamlit / pandas / playwright / uvicorn / edge-tts / requests（仅测试与实验用，运行时不 import）
+Flask==3.1.3
+Werkzeug==3.1.9
+waitress==3.0.2
+python-dotenv==1.2.4
+openai==3.41.0
+faster-whisper==1.2.1
+ctranslate2==4.8.4
+onnxruntime==1.31.1
+numpy==2.5.4
+av==19.0.2
+tokenizers==0.23.3
+huggingface_hub==2.4.0
+reportlab==5.1.0

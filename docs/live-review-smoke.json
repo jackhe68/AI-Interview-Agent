@@ -1,0 +1,51 @@
+{
+  "source": "One real DeepSeek call; synthetic fixture measurements and constructed text; no production data",
+  "result": {
+    "synthetic-live-review": {
+      "status": "ok",
+      "content": {
+        "relevance": {
+          "comment": "未真正自我介绍，只讲数据库索引一点",
+          "evidence": "我熟悉数据库索引"
+        },
+        "knowledge": {
+          "comment": "索引与执行计划方向对，但缺具体做法",
+          "evidence": "用执行计划定位慢查询"
+        },
+        "completeness": {
+          "comment": "缺少技术栈、项目经历与个人角色",
+          "evidence": "我熟悉数据库索引"
+        },
+        "logic": {
+          "comment": "单句陈述，缺少问题与结果的因果展开",
+          "evidence": ""
+        },
+        "repetition": {
+          "comment": "未见重复表述",
+          "evidence": ""
+        },
+        "fillers": {
+          "comment": "文本未见明显口头禅",
+          "evidence": ""
+        }
+      },
+      "voice_observations": [
+        {
+          "metric": "hanzi_per_min_speech",
+          "comment": "言语部分节奏偏缓，内容量少，宜适度连贯"
+        },
+        {
+          "metric": "pause_count",
+          "comment": "停顿次数少，长停顿未出现，整体较连贯"
+        }
+      ],
+      "suggestions": [
+        "按教育背景、技术栈、项目角色与成果的顺序搭建自我介绍",
+        "补充索引优化的具体场景、做法与效果，体现个人贡献",
+        "英语口语语速指标未采集，暂不评价相关表现"
+      ],
+      "source": "DeepSeek",
+      "not_scored": true
+    }
+  }
+}

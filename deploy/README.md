@@ -1,0 +1,80 @@
+# 部署手册（阿里云 轻量 4核8G / Ubuntu 24.04）
+
+面向：`mymianshiguan.cn` + 大陆地域轻量应用服务器。香港/海外机器也能用，只是不需要备案。
+
+## 0. 前置
+
+- 服务器已开通，公网 IP 已知，`ssh root@IP` 能登录
+- 域名实名通过、ICP 备案通过（大陆机器；香港机器跳过）
+- `.env` 至少包含 `DEEPSEEK_API_KEY`
+- 建议同时设置固定密钥：`SECRET_KEY=<64位随机串>`（不设则 `wsgi.py` 自动生成到 `.secret_key`）
+
+## 1. 建用户并打通密钥登录
+
+```bash
+adduser deploy && usermod -aG sudo deploy
+rsync --archive --chown=deploy:deploy ~/.ssh /home/deploy
+```
+
+本地：
+
+```powershell
+ssh-copy-id deploy@<IP>
+ssh deploy@<IP> "sudo -v"
+```
+
+## 2. 上传代码（Windows 本机）
+
+```powershell
+powershell -ExecutionPolicy Bypass -File deploy\upload.ps1 -Server <IP>
+```
+
+包内已排除 `.venv`、`.public-test`、`__pycache__`、`.git`；`models/` 会一起传（约 356MB）。
+
+## 3. 一键初始化（服务器）
+
+```bash
+sudo bash /var/www/aiinterview/deploy/bootstrap.sh
+```
+
+脚本做这些事：装 Python/Nginx/certbot/ufw/fail2ban → 设时区与 swap → 建 venv 装依赖 →
+**预热 whisper 模型** → 写 systemd 服务 → 配 Nginx → 开防火墙 → 健康检查。
+
+## 4. 域名解析与证书（备案通过后）
+
+```
+@    A   <公网IP>
+www  A   <公网IP>
+```
+
+```bash
+sudo certbot --nginx -d mymianshiguan.cn -d www.mymianshiguan.cn --redirect
+sudo certbot renew --dry-run
+```
+
+## 5. 自检
+
+```bash
+ss -tlnp | grep -E '5010|:80|:443'     # 5010 只应出现在 127.0.0.1
+curl -I https://mymianshiguan.cn
+journalctl -u aiinterview -f           # 实时日志
+```
+
+浏览器完整跑一遍：开始面试 → 录音 → 转写 → 评分 → 报告 → 语音建议。
+
+## 6. 日常运维
+
+| 操作 | 命令 |
+|---|---|
+| 看状态 | `systemctl status aiinterview` |
+| 重启 | `sudo systemctl restart aiinterview` |
+| 更新代码 | 本机 `upload.ps1` 后 `sudo systemctl restart aiinterview` |
+| 备份数据库 | `sqlite3 interviews.db ".backup '/var/backups/iv-$(date +%F).db'"` |
+| 看磁盘 | `df -h`、`du -sh /var/log/nginx/*` |
+
+## 注意
+
+- **不要改成 gunicorn -w N**，单进程多线程是设计前提。
+- 升级依赖时改 `deploy/requirements.txt` 再 `pip install -r`，不要 `pip install -U` 全量升。
+- 根目录 5 个 `.html` 是模板（`template_folder="."`），别挪进 `templates/`。
+- 试用入口 `tools/run_public_test.py`（Cloudflare Tunnel + trials.db）与正式站互不影响，别在生产机上跑。

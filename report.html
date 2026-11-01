@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>面试报告 · AI Interview Agent</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+  <style>
+    /* 报告页第三阶段补充样式 */
+    .empty-state { padding: 80px 24px; text-align: center; }
+    .empty-state__icon { font-size: 48px; margin-bottom: 16px; opacity: .7; }
+    .empty-state__title { font-size: 20px; font-weight: 700; margin-bottom: 8px; }
+    .empty-state__desc { color: var(--text-2); font-size: 14px; margin-bottom: 24px; }
+    .report-disclaimer {
+      margin: 0 0 24px; padding: 12px 18px; border-radius: 12px;
+      background: var(--surface-soft); border: 1px solid var(--border);
+      font-size: 12px; color: var(--text-3); text-align: center;
+    }
+    .report-comment { margin-top: 22px; padding: 16px 18px; border-radius: 12px;
+      background: linear-gradient(135deg,#FBFAFF,#F6F4FF); border: 1px solid rgba(108,99,255,.18); }
+    .report-comment__head { font-size: 13px; color: var(--primary-dk); font-weight: 700; margin-bottom: 6px; }
+    .report-comment__body { font-size: 14px; color: var(--text-2); line-height: 1.7; }
+    .confidence-note { margin-top: 12px; font-size: 12px; color: var(--warning);
+      background: var(--warning-bg); border: 1px solid rgba(217,119,6,.22);
+      padding: 8px 12px; border-radius: 10px; }
+    .pace-empty { padding: 40px 24px; text-align: center; color: var(--text-3); font-size: 14px; }
+    .pace-empty .icon { font-size: 32px; margin-bottom: 10px; opacity: .6; }
+    .is-hidden { display: none !important; }
+    .skel { color: var(--text-3); }
+  </style>
+</head>
+<body>
+  <div class="bg-fx"></div>
+
+  <!-- 顶部导航 -->
+  <header class="nav">
+    <div class="container nav__inner">
+      <a class="nav__logo" href="/">
+        <span class="nav__logo-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2a4 4 0 0 1 4 4v5a4 4 0 0 1-8 0V6a4 4 0 0 1 4-4z"/>
+            <path d="M5 10v1a7 7 0 0 0 14 0v-1"/>
+            <path d="M12 18v4"/>
+          </svg>
+        </span>
+        AI Interview Agent
+      </a>
+      <nav class="nav__links">
+        <a class="nav__link" href="/">返回首页</a>
+        <a class="nav__link" href="/history">历史面试</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <!-- 报告头 -->
+    <div class="report-head">
+      <div>
+        <h1 id="reportTitle">面试报告</h1>
+        <div class="report-meta" id="reportMeta"></div>
+      </div>
+      <div class="report-actions">
+        <button class="btn btn--ghost" id="exportBtn" type="button" disabled>导出 PDF 报告</button>
+        <button class="btn btn--outline" id="refreshBtn">刷新报告</button>
+      </div>
+    </div>
+    <p class="report-export-status" id="exportStatus" role="status" aria-live="polite">报告加载后可导出 PDF，包含完整参考回答与练习任务。</p>
+
+    <!-- 空状态 / 加载 -->
+    <section class="glass-card empty-state is-hidden" id="reportEmpty">
+      <div class="empty-state__icon">📊</div>
+      <div class="empty-state__title" id="emptyTitle">暂无报告数据</div>
+      <div class="empty-state__desc" id="emptyDesc">请先完成一场面试，结束即可生成 AI 评分报告。</div>
+      <button class="btn btn--outline" id="retryReportBtn" type="button">重试加载报告</button>
+      <a class="btn btn--primary" href="/">去开始面试</a>
+    </section>
+
+    <!-- 报告正文 -->
+    <div id="reportBody" class="is-hidden">
+      <div class="report-disclaimer" id="reportDisclaimer"></div>
+
+      <!-- 评分 + 雷达 -->
+      <div class="report-grid">
+        <section class="glass-card score-card">
+          <div class="card-head">
+            <h3><span class="bar"></span>综合评分</h3>
+            <span class="badge" id="gradeBadge">—</span>
+          </div>
+          <div class="score-wrap">
+            <div class="score-ring">
+              <svg width="180" height="180" viewBox="0 0 180 180">
+                <defs>
+                  <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#6C63FF"/>
+                    <stop offset="100%" stop-color="#8B5CF6"/>
+                  </linearGradient>
+                </defs>
+                <circle class="track" cx="90" cy="90" r="76"></circle>
+                <circle class="value" id="ringValue" cx="90" cy="90" r="76"
+                        stroke-dasharray="477.5" stroke-dashoffset="477.5"></circle>
+              </svg>
+              <div class="score-ring__center">
+                <div class="score-ring__num"><span id="scoreNum">0</span><small> / 100</small></div>
+                <div class="score-ring__label">综合得分</div>
+              </div>
+            </div>
+            <div class="score-sub" id="scoreSub"></div>
+          </div>
+          <div class="report-comment" id="reportComment" class="is-hidden">
+            <div class="report-comment__head" id="commentHead">AI 总评</div>
+            <div class="report-comment__body" id="commentBody"></div>
+            <div class="confidence-note is-hidden" id="confidenceNote"></div>
+          </div>
+        </section>
+
+        <section class="glass-card radar-card">
+          <div class="card-head">
+            <h3><span class="bar"></span>八维能力分析</h3>
+            <span class="badge">AI 真实评分</span>
+          </div>
+          <canvas id="radarChart"></canvas>
+          <p class="confidence-note" id="radarNote"></p>
+          <div class="radar-values" id="radarValues"></div>
+        </section>
+      </div>
+
+      <section class="glass-card practice-card">
+        <div class="card-head">
+          <h3><span class="bar"></span>逐题复盘与重答练习</h3>
+          <span class="badge">看思路 · 再作答 · 对照检查</span>
+        </div>
+        <p class="practice-intro">先回顾自己的回答，再展开参考回答。参考回答用于学习，不是唯一标准答案。</p>
+        <div id="reviewList"></div>
+      </section>
+
+      <!-- 独立语音分析：不改变既有评分 -->
+      <div class="report-grid report-grid--full">
+        <section class="glass-card pace-card">
+          <div class="card-head">
+            <h3><span class="bar"></span>语言与语音表达分析</h3>
+            <span class="badge" id="speechReportBadge">尚未采集</span>
+          </div>
+          <div id="speechReport" aria-live="polite"></div>
+          <button class="btn btn--ghost btn--sm is-hidden" id="speechReviewBtn" type="button">生成或重试 AI 语音建议</button>
+          <p class="confidence-note">语音指标仅用于练习，不参与上方评分。dBFS 受设备增益影响，不能据此推断自信或真实心理状态。SER 尚未完成真人验证，未在报告中启用。</p>
+        </section>
+      </div>
+
+      <!-- 薄弱知识点 + 改进建议 -->
+      <div class="report-grid">
+        <section class="glass-card weak-card">
+          <div class="card-head">
+            <h3><span class="bar"></span>薄弱知识点</h3>
+            <span class="badge">AI 真实评估</span>
+          </div>
+          <div class="weak-list" id="weakList"></div>
+          <div class="weak-tags" id="weakTags"></div>
+        </section>
+
+        <section class="glass-card advice-card">
+          <div class="card-head">
+            <h3><span class="bar"></span>改进建议</h3>
+            <span class="badge">AI 真实建议</span>
+          </div>
+          <div class="advice-list" id="adviceList"></div>
+        </section>
+      </div>
+    </div>
+
+    <div class="report-footer">
+      <a class="btn btn--ghost btn--lg" href="/">返回首页</a>
+      <a class="btn btn--outline btn--lg" href="/#config">更换岗位重新面试</a>
+      <button class="btn btn--primary btn--lg" id="replaySameBtn" type="button">
+        再练一场（同配置）
+      </button>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="container" style="display:flex; justify-content:space-between; flex-wrap:wrap; gap:12px;">
+      <span>© 2026 AI Interview Agent · 大学生求职 AI 模拟面试系统</span>
+      <span>评分由 DeepSeek 基于真实回答生成 · SQLite 持久化</span>
+    </div>
+  </footer>
+
+  <div class="toast" id="toast"></div>
+  <script src="/static/js/main.js"></script>
+  <script src="/static/js/report.js?v=major-path-20261101"></script>
+</body>
+</html>

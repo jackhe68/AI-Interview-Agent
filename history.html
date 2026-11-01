@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>历史面试 · AI Interview Agent</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+  <div class="bg-fx"></div>
+
+  <!-- 顶部导航 -->
+  <header class="nav">
+    <div class="container nav__inner">
+      <a class="nav__logo" href="/">
+        <span class="nav__logo-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2a4 4 0 0 1 4 4v5a4 4 0 0 1-8 0V6a4 4 0 0 1 4-4z"/>
+            <path d="M5 10v1a7 7 0 0 0 14 0v-1"/>
+            <path d="M12 18v4"/>
+          </svg>
+        </span>
+        AI Interview Agent
+      </a>
+      <nav class="nav__links">
+        <a class="nav__link" href="/">返回首页</a>
+        <a class="nav__link is-active" href="/history">历史面试</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <div class="history-head">
+      <div>
+        <h1>历史面试记录</h1>
+        <p class="history-sub">查看以往每场模拟面试的状态与 AI 评分报告（数据保存在本地 SQLite，重启服务不丢失）</p>
+      </div>
+      <a class="btn btn--primary" href="/#config">开始新面试</a>
+    </div>
+
+    <!-- 空状态 -->
+    <section class="glass-card history-empty is-hidden" id="historyEmpty">
+      <div class="history-empty__icon">🗂️</div>
+      <div class="history-empty__title">还没有任何面试记录</div>
+      <div class="history-empty__desc">完成第一场模拟面试后，这里会显示你的历史记录与评分报告。</div>
+      <a class="btn btn--primary" href="/">去开始面试</a>
+    </section>
+
+    <!-- 列表 -->
+    <div class="history-list" id="historyList"></div>
+  </main>
+
+  <footer class="footer">
+    <div class="container" style="display:flex; justify-content:space-between; flex-wrap:wrap; gap:12px;">
+      <span>© 2026 AI Interview Agent · 大学生求职 AI 模拟面试系统</span>
+      <span>历史数据由 SQLite 持久化存储</span>
+    </div>
+  </footer>
+
+  <div class="toast" id="toast"></div>
+  <script src="/static/js/main.js"></script>
+  <script src="/static/js/drafts.js?v=draft-recovery-20261101"></script>
+  <script src="/static/js/history.js?v=draft-recovery-20261101"></script>
+</body>
+</html>

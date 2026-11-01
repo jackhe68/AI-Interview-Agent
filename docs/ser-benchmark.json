@@ -1,0 +1,78 @@
+{
+  "fixture": "Windows SAPI synthetic Chinese (not a human emotion dataset)",
+  "load_ms": 1298.7,
+  "peak_working_set_mb": 657.0,
+  "results": [
+    {
+      "status": "experimental",
+      "model": "emotion2vec/emotion2vec_plus_base",
+      "conversion": "pankotaro/emotion2vec-plus-base-onnx",
+      "revision": "334d4376993c381f059cc36d2c6ed05cbfec5ca1",
+      "label": "neutral",
+      "probabilities": {
+        "angry": 3.046532037842553e-05,
+        "disgusted": 4.956489192409208e-06,
+        "fearful": 1.7868843826818193e-07,
+        "happy": 0.02686329372227192,
+        "neutral": 0.9730753302574158,
+        "other": 5.440169275061635e-07,
+        "sad": 1.693639933364466e-05,
+        "surprised": 8.127607543428894e-06,
+        "unknown": 1.071841850830424e-07
+      },
+      "confidence": 0.9730753302574158,
+      "confidence_kind": "uncalibrated_softmax",
+      "analyzed_seconds": 3.0,
+      "inference_ms": 220.5,
+      "warning": "实验性模型预测，不代表真实心理状态；未验证中文面试准确率，不用于评分。"
+    },
+    {
+      "status": "experimental",
+      "model": "emotion2vec/emotion2vec_plus_base",
+      "conversion": "pankotaro/emotion2vec-plus-base-onnx",
+      "revision": "334d4376993c381f059cc36d2c6ed05cbfec5ca1",
+      "label": "neutral",
+      "probabilities": {
+        "angry": 1.8500940363042062e-11,
+        "disgusted": 1.1939494531931771e-12,
+        "fearful": 2.392279625264282e-13,
+        "happy": 1.6421598802995874e-10,
+        "neutral": 1.0,
+        "other": 5.0309874267875226e-14,
+        "sad": 5.832907074010407e-11,
+        "surprised": 6.04151104144357e-12,
+        "unknown": 1.4631050819675917e-13
+      },
+      "confidence": 1.0,
+      "confidence_kind": "uncalibrated_softmax",
+      "analyzed_seconds": 8.0,
+      "inference_ms": 621.9,
+      "warning": "实验性模型预测，不代表真实心理状态；未验证中文面试准确率，不用于评分。"
+    },
+    {
+      "status": "experimental",
+      "model": "emotion2vec/emotion2vec_plus_base",
+      "conversion": "pankotaro/emotion2vec-plus-base-onnx",
+      "revision": "334d4376993c381f059cc36d2c6ed05cbfec5ca1",
+      "label": "neutral",
+      "probabilities": {
+        "angry": 1.8500940363042062e-11,
+        "disgusted": 1.1939494531931771e-12,
+        "fearful": 2.392279625264282e-13,
+        "happy": 1.6421598802995874e-10,
+        "neutral": 1.0,
+        "other": 5.0309874267875226e-14,
+        "sad": 5.832907074010407e-11,
+        "surprised": 6.04151104144357e-12,
+        "unknown": 1.4631050819675917e-13
+      },
+      "confidence": 1.0,
+      "confidence_kind": "uncalibrated_softmax",
+      "analyzed_seconds": 8.0,
+      "inference_ms": 685.4,
+      "warning": "实验性模型预测，不代表真实心理状态；未验证中文面试准确率，不用于评分。"
+    }
+  ],
+  "production_enabled": false,
+  "reason": "No labeled real Mandarin interview audio; probabilities uncalibrated"
+}
