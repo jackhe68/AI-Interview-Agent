@@ -16,7 +16,8 @@ import json
 import os
 import sqlite3
 import time
-from datetime import datetime
+from datetime import datetime, timezone
+from interview_time import normalize_interview, timestamp
 
 DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "interviews.db")
 
@@ -32,6 +33,7 @@ class ManagedConnection(sqlite3.Connection):
 def get_conn():
     conn = sqlite3.connect(DB_PATH, factory=ManagedConnection)
     conn.row_factory = sqlite3.Row
+    conn.create_function("interview_timestamp", 1, timestamp, deterministic=True)
     conn.execute("PRAGMA foreign_keys = ON")
     return conn
 
@@ -117,7 +119,7 @@ def init_db():
 
 
 def _now():
-    return datetime.now().isoformat(timespec="seconds")
+    return datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
 
 
 # ------------------------------------------------------------------
@@ -152,7 +154,7 @@ def get_interview(interview_id):
         row = conn.execute(
             "SELECT * FROM interviews WHERE id = ?", (interview_id,)
         ).fetchone()
-        return dict(row) if row else None
+        return normalize_interview(row) if row else None
 
 
 def update_progress(interview_id, current_question, followup_count, status=None):
@@ -218,7 +220,7 @@ def get_messages(interview_id):
             "SELECT * FROM messages WHERE interview_id=? ORDER BY sequence ASC",
             (interview_id,),
         ).fetchall()
-        return [dict(r) for r in rows]
+        return [normalize_interview(r) for r in rows]
 
 
 def next_sequence(interview_id):
@@ -302,12 +304,12 @@ def list_interviews(limit=50):
             FROM interviews i
             LEFT JOIN reports r ON r.interview_id = i.id
             GROUP BY i.id
-            ORDER BY i.started_at DESC
+            ORDER BY interview_timestamp(i.started_at) DESC
             LIMIT ?
             """,
             (limit,),
         ).fetchall()
-        return [dict(r) for r in rows]
+        return [normalize_interview(r) for r in rows]
 
 
 def delete_interview(interview_id):

@@ -10,6 +10,25 @@
 (function () {
   "use strict";
 
+  window.formatInterviewTime = function (iso) {
+    if (!iso) return '时间未知';
+    var text = String(iso);
+    if (!/(Z|[+-]\d{2}:\d{2})$/.test(text)) text += '+09:00';
+    var date = new Date(text);
+    if (!Number.isFinite(date.getTime())) return '时间未知';
+    return new Intl.DateTimeFormat('zh-CN', {timeZone:'Asia/Shanghai',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(date) + '（北京时间）';
+  };
+  window.showError = function (message) {
+    var notice = document.getElementById('appNotice');
+    if (!notice) {
+      notice = document.createElement('div'); notice.id = 'appNotice'; notice.className = 'app-notice'; notice.setAttribute('role','alert');
+      var text = document.createElement('p'); text.className = 'app-notice-text'; notice.appendChild(text);
+      var close = document.createElement('button'); close.type='button'; close.textContent='关闭提示';
+      close.addEventListener('click', function () { notice.hidden=true; }); notice.appendChild(close); document.body.appendChild(notice);
+    }
+    notice.querySelector('p').textContent = message; notice.hidden = false;
+  };
+
   /* ---------- Toast ---------- */
   var toastEl = null;
   var toastTimer = null;
@@ -22,6 +41,7 @@
         document.body.appendChild(toastEl);
       }
     }
+    toastEl.setAttribute('role','status');
     toastEl.textContent = msg;
     toastEl.classList.add("is-visible");
     clearTimeout(toastTimer);
@@ -74,7 +94,7 @@
   var catalogNode = document.getElementById('interviewCatalog');
   var catalog;
   try { catalog = JSON.parse(catalogNode.textContent); }
-  catch (error) { showToast('专业目录暂未加载，请刷新页面后重试'); return; }
+  catch (error) { showError('专业目录暂未加载，请刷新页面后重试'); return; }
   var state = {mode:'major', discipline:null, major_id:null, job:null, level:'实习入门'};
   var disciplineGrid = document.getElementById('disciplineGrid');
   var majorPath = document.getElementById('majorPath');
@@ -284,7 +304,7 @@
       })
       .then(function (r) {
         if (!r.ok) {
-          showToast(r.data && r.data.error ? r.data.error : "面试启动失败（" + r.status + "），请稍后重试");
+          showError(r.data && r.data.error ? r.data.error : "面试启动失败（" + r.status + "），请稍后重试");
           starting = false;
           syncUI();
           startBtn.innerHTML = original;
@@ -308,7 +328,7 @@
         window.location.href = "/interview";
       })
       .catch(function () {
-        showToast("连接暂时中断，请稍后重试；当前选择仍保留");
+        showError("连接暂时中断，请稍后重试；当前选择仍保留");
         starting = false;
         syncUI();
         startBtn.innerHTML = original;

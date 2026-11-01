@@ -18,7 +18,7 @@
   }
   function fmtDate(iso) {
     if (!iso) return "—";
-    return iso.replace("T", " ").slice(0, 16);
+    return window.formatInterviewTime(iso);
   }
   function statusInfo(status) {
     if (status === "finished") return { text: "已完成", cls: "is-done" };
@@ -104,7 +104,7 @@
         .then(function (res) { return res.json().then(function (d) { return { ok: res.ok, data: d }; }); })
         .then(function (r) {
           if (!r.ok) {
-            showToast(r.data && r.data.error ? r.data.error : "删除失败");
+            showError(r.data && r.data.error ? r.data.error : "暂时无法删除，请稍后重试");
             restoreAction(row);
             return;
           }
@@ -124,7 +124,7 @@
           showToast("已删除该面试记录及本机草稿");
         })
         .catch(function () {
-          showToast("网络异常，删除失败");
+          showError("删除结果暂未确认，请刷新历史列表核对。");
           restoreAction(row);
         });
     });
@@ -154,15 +154,15 @@
       .then(function (res) { return res.json().then(function (d) { return { ok: res.ok, data: d }; }); })
       .then(function (r) {
         if (!r.ok || !r.data || !r.data.items) {
-          showToast(r.data && r.data.error ? r.data.error : "历史记录加载失败");
-          renderEmpty();
+          showError(r.data && r.data.error ? r.data.error : "历史记录暂未加载，请刷新页面重试；原记录仍保留。");
+          emptyEl.classList.add("is-hidden");
           return;
         }
         renderList(r.data.items);
       })
       .catch(function () {
-        showToast("网络异常，无法连接服务器");
-        renderEmpty();
+        showError("网络暂时中断，请刷新页面重试；原面试记录仍保留。");
+        emptyEl.classList.add("is-hidden");
       });
   }
 

@@ -36,6 +36,7 @@ Copy-Item .env.example .env
 
 - [公网试用说明](docs/public-trial-guide.md)
 - [正式部署说明](deploy/README.md)
+- [时间与基础交互优化](docs/time-and-interaction.md)
 - [继续面试与后台报告](docs/practice-flow.md)
 - [草稿保护与手动查看报告](docs/draft-recovery.md)
 - [专业选择与岗位推荐](docs/major-paths.md)

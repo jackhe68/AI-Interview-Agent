@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>AI 语音面试 · AI Interview Agent</title>
-  <link rel="stylesheet" href="/static/css/style.css?v=practice-flow-20261101">
+  <link rel="stylesheet" href="/static/css/style.css?v=clarity-20261101">
 </head>
 <body>
   <div class="bg-fx"></div>
@@ -35,10 +35,10 @@
       <div class="badge"><span class="dot"></span><span id="jobBadge">Java 后端</span></div>
       <div class="iv-progress">
         <div class="iv-progress__meta">
-          <span>面试进度 · <b id="qNow">1</b> / <b id="qTotal">8</b> 题</span>
+          <span>当前主问题 · <b id="qNow">1</b> / <b id="qTotal">3</b></span>
           <span id="progressPhase">准备开始</span>
         </div>
-        <div class="iv-progress__track">
+        <div class="iv-progress__track" id="progressTrack" role="progressbar" aria-label="已完成作答进度" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
           <div class="iv-progress__fill" id="progressFill"></div>
         </div>
       </div>
@@ -65,7 +65,7 @@
           <div class="question-card__no">当前问题 <b id="qIndex">01</b></div>
           <div class="badge" id="qLevelBadge">校招标准</div>
         </div>
-        <div class="question-card__text" id="questionText">
+        <div class="question-card__text" id="questionText" aria-live="polite" aria-atomic="true">
           正在加载第一道面试题…
         </div>
         <div class="question-card__tts">
@@ -117,11 +117,11 @@
 
       <section class="glass-card text-input-card">
         <div class="text-input-card__head">
-          <span>✍️ 回答内容（可文字输入或语音转写后编辑）</span>
+          <label for="answerInput">✍️ 回答内容（可文字输入或语音转写后编辑）</label>
           <span style="color:var(--text-3); font-size:12px;">Ctrl/⌘ + Enter 快速提交</span>
         </div>
         <div class="text-input-row">
-          <textarea id="answerInput" placeholder="在此输入你的回答，或停止录音后自动识别填入，可编辑修正后提交…"></textarea>
+          <textarea id="answerInput" aria-describedby="draftStatus" placeholder="在此输入你的回答，或停止录音后自动识别填入，可编辑修正后提交…"></textarea>
           <div class="draft-controls">
             <p id="draftStatus" role="status" aria-live="polite">草稿仅保存在当前浏览器，保留24小时；录音文件不保存。</p>
             <button class="btn btn--ghost btn--sm" id="clearDraftBtn" type="button">清空草稿</button>
@@ -150,7 +150,7 @@
       <!-- 状态文本 -->
       <div class="iv-state-text">
         <span class="pulse-dot"></span>
-        <span id="stateText">请在下方文字框输入你的回答</span>
+        <span id="stateText" role="status" aria-live="polite">请在下方文字框输入你的回答</span>
       </div>
 
       <!-- 控制 -->
@@ -177,10 +177,11 @@
   </main>
 
   <!-- 结束确认弹窗 -->
-  <div class="modal-mask" id="endModal">
+  <div class="modal-mask" id="endModal" hidden role="dialog" aria-modal="true" aria-labelledby="endModalTitle" aria-describedby="endModalDescription">
     <div class="glass-card modal">
-      <h3>结束本场面试？</h3>
-      <p>结束后将根据已完成的作答生成面试报告。尚未提交的文字不会计入评分，确认结束后会清除此场的本机草稿。</p>
+      <h3 id="endModalTitle">结束本场面试？</h3>
+      <p id="endModalDescription">结束后将根据已完成的作答生成面试报告。尚未提交的文字不会计入评分，确认结束后会清除此场的本机草稿。</p>
+      <p id="endError" role="alert" class="resume-error"></p>
       <div class="modal__actions">
         <button class="btn btn--ghost" id="cancelEndBtn">继续面试</button>
         <button class="btn btn--primary" id="confirmEndBtn">结束并查看报告</button>
@@ -190,8 +191,8 @@
 
   <div class="toast" id="toast"></div>
   <script src="/static/js/navigation.js?v=practice-flow-20261101"></script>
-  <script src="/static/js/main.js?v=practice-flow-20261101"></script>
+  <script src="/static/js/main.js?v=clarity-20261101"></script>
   <script src="/static/js/drafts.js?v=draft-recovery-20261101"></script>
-  <script src="/static/js/interview.js?v=draft-recovery-20261101"></script>
+  <script src="/static/js/interview.js?v=clarity-20261101"></script>
 </body>
 </html>

@@ -95,7 +95,10 @@
   function showCompletion() {
     completionCard.classList.toggle('is-hidden',!finished);
     if (finished) {
-      progressFill.style.width = '100%'; endBtn.textContent = '查看报告';
+      progressFill.style.width = '100%';
+      document.getElementById('progressTrack').setAttribute('aria-valuenow','100');
+      document.getElementById('progressTrack').setAttribute('aria-valuetext','本场作答已结束，等待手动查看报告');
+      endBtn.textContent = '查看报告';
       setState('idle','作答已保存，请先查看最后点评，再手动进入报告','✅');
       progressPhase.textContent = '等待手动查看报告';
     }
@@ -119,6 +122,7 @@
     questionId = data.question_sequence;
     finished = !!data.finished; stateProcessing = !!data.processing;
     answered = data.answered_count || 0; answeredCountEl.textContent = answered;
+    if (Number.isFinite(data.elapsed_seconds)) { totalSec = data.elapsed_seconds; timerTextEl.textContent = fmt(totalSec); }
     session.progress = data.progress; session.question_sequence = questionId;
     showQuestion(data.question,data.progress); displayFeedback(data.comment);
     var restored = drafts.get(questionId);
@@ -200,20 +204,18 @@
     stage.setAttribute("data-state", next);
     if (text) stateTextEl.textContent = text;
     if (emoji) orbEmoji.textContent = emoji;
-    progressPhase.textContent = ({
-      idle: "等待作答",
-      thinking: "AI 分析回答中",
-      speaking: "AI 提问中"
-    })[next] || "";
   }
 
   function updateProgress(progress) {
     if (!progress) return;
-    var pct = Math.round(((progress.main - 1) / progress.total) * 100);
-    progressFill.style.width = Math.max(pct, 4) + "%";
+    var completed = Math.max(0,(progress.main-1)*2 + (progress.type==='followup' ? 1 : 0));
+    var pct = Math.round(completed/(progress.total*2)*100);
+    progressFill.style.width = Math.min(100,pct) + "%";
+    document.getElementById('progressTrack').setAttribute('aria-valuenow',String(pct));
+    document.getElementById('progressTrack').setAttribute('aria-valuetext','已完成'+completed+'次作答；当前主问题'+progress.main+'/'+progress.total);
     qNowEl.textContent = progress.main;
     qIndexEl.textContent = pad2(progress.main);
-    progressPhase.textContent = progress.type === "followup" ? "追问中" : "主问题 " + progress.main + "/" + progress.total;
+    progressPhase.textContent = progress.type === "followup" ? "追问中" : "首轮作答";
   }
 
   function showQuestion(text, progress) {
@@ -638,39 +640,59 @@
     submitAnswer("（候选人选择跳过此题）", true);
   });
 
-  /* ---------- 结束面试 ---------- */
-  endBtn.addEventListener("click", function () { if (finished) viewReport(); else endModal.classList.add("is-open"); });
-  cancelEndBtn.addEventListener("click", function () { endModal.classList.remove("is-open"); });
-  endModal.addEventListener("click", function (e) {
-    if (e.target === endModal) endModal.classList.remove("is-open");
+  /* ---------- 结束面试：焦点留在确认窗口，失败提示持续显示 ---------- */
+  var modalReturnFocus = null, modalBackground = [];
+  function closeEndModal() {
+    if (confirmEndBtn.disabled) return;
+    endModal.classList.remove('is-open'); endModal.hidden=true;
+    modalBackground.forEach(function (entry) { entry.el.inert = entry.inert; });
+    modalBackground = [];
+    if (modalReturnFocus && modalReturnFocus.isConnected) modalReturnFocus.focus();
+  }
+  function openEndModal() {
+    modalReturnFocus = document.activeElement;
+    document.getElementById('endError').textContent = '';
+    modalBackground = Array.from(document.body.children).filter(function (node) { return node !== endModal; }).map(function (node) { var entry={el:node,inert:node.inert}; node.inert=true; return entry; });
+    endModal.hidden=false; endModal.classList.add('is-open'); cancelEndBtn.focus();
+  }
+  endBtn.addEventListener('click', function () { if (finished) viewReport(); else openEndModal(); });
+  cancelEndBtn.addEventListener('click',closeEndModal);
+  endModal.addEventListener('click',function (event) { if (event.target===endModal) closeEndModal(); });
+  endModal.tabIndex = -1;
+  document.addEventListener('keydown',function (event) {
+    if (!endModal.classList.contains('is-open')) return;
+    if (event.key==='Escape') { event.preventDefault(); closeEndModal(); }
+    if (event.key==='Tab') {
+      var buttons=Array.from(endModal.querySelectorAll('button:not(:disabled),[href],input:not(:disabled),[tabindex="0"]')).filter(function (node) { return node.getClientRects().length; });
+      if (!buttons.length) { event.preventDefault(); endModal.focus(); return; }
+      var first=buttons[0],last=buttons[buttons.length-1];
+      if (event.shiftKey && (document.activeElement===first || !endModal.contains(document.activeElement))) { event.preventDefault();last.focus(); }
+      else if (!event.shiftKey && (document.activeElement===last || document.activeElement===endModal)) { event.preventDefault();first.focus(); }
+    }
   });
-  confirmEndBtn.addEventListener("click", function () {
-    if (busy || finished) { showToast("AI 正在处理或面试已结束"); return; }
-    saveDraft();
-    finished = true;
-    stopQuestionSpeech();
-    clearRecording();
-    syncControls();
-    fetch("/api/interview/end", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ session_id: session.session_id })
+  document.addEventListener('focusin',function (event) {
+    if (endModal.classList.contains('is-open') && !endModal.contains(event.target)) {
+      if (confirmEndBtn.disabled) endModal.focus(); else cancelEndBtn.focus();
+    }
+  });
+  confirmEndBtn.addEventListener('click',function () {
+    if (busy || finished || confirmEndBtn.disabled) return;
+    saveDraft(); finished=true; confirmEndBtn.disabled=true; cancelEndBtn.disabled=true;
+    document.getElementById('endError').textContent='正在保存并结束面试，请稍候…';
+    stopQuestionSpeech(); clearRecording(); syncControls(); endModal.focus();
+    var endController=window.AbortController ? new AbortController() : null;
+    var endTimer=setTimeout(function () { if (endController) endController.abort(); },15000);
+    fetch('/api/interview/end', {
+      signal:endController ? endController.signal : undefined,
+      method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({session_id:session.session_id})
     }).then(function (response) {
-        return response.json().then(function (data) {
-          if (!response.ok || !data.finished) throw new Error(data.error || '结束面试失败，请重试');
-        });
-      }).then(function () {
-        drafts.clear(); checkpoint(); viewReport();
-      }).catch(function (error) {
-        finished = false;
-        syncControls();
-        showToast(error.message && error.message !== 'Failed to fetch' ? error.message : '连接暂时中断，回答已保留，请再次点击结束面试');
-      });
-  });
-
-  /* ---------- 键盘 ---------- */
-  document.addEventListener("keydown", function (e) {
-    if (e.key === "Escape") endModal.classList.remove("is-open");
+      return response.json().then(function (data) { if (!response.ok || !data.finished) throw new Error(data.error || '结束面试失败，请重试'); });
+    }).then(function () { drafts.clear();checkpoint();viewReport(); })
+      .catch(function (error) {
+        finished=false;confirmEndBtn.disabled=false;cancelEndBtn.disabled=false;syncControls();
+        document.getElementById('endError').textContent=error.name==='AbortError' ? '结束结果暂未确认，草稿仍保留，请点击重试。' : error.name==='SyntaxError' ? '连接返回异常，草稿仍保留，请重试。' : error.message && error.message!=='Failed to fetch' ? error.message : '连接暂时中断，回答已保留，请再次点击结束面试。';
+        confirmEndBtn.focus();
+      }).finally(function () { clearTimeout(endTimer); });
   });
 
   setState("idle", "请在下方文字框输入你的回答", "🎙️");

@@ -24,6 +24,7 @@ import uuid
 from io import BytesIO
 
 import database as dbm
+from interview_time import timestamp
 from dotenv import load_dotenv
 from flask import Flask, jsonify, render_template, request, send_file
 from openai import OpenAI
@@ -223,7 +224,7 @@ def load_session(session_id):
         "followup_used": iv["followup_count"],
         "history": history,
         "finished": iv["status"] in ("finished", "ended"),
-        "started_at": time.time(),  # 重启后无法精确还原，仅用于计时
+        "started_at": timestamp(iv["started_at"]),  # 从持久记录恢复实际开始时间
         "busy": False,
     }
     SESSIONS[session_id] = session
@@ -732,7 +733,8 @@ def api_interview_state(session_id):
     comments = [m for m in messages if m['message_type'] == 'comment']
     from datetime import datetime
     try:
-        elapsed = max(0, int(time.time()-datetime.fromisoformat(iv['started_at']).timestamp()))
+        end_time = datetime.fromisoformat(iv['ended_at']).timestamp() if iv['ended_at'] else time.time()
+        elapsed = max(0, int(end_time-datetime.fromisoformat(iv['started_at']).timestamp()))
     except (ValueError, TypeError):
         elapsed = 0
     response = jsonify(session_id=session_id, job=iv['job'], level=iv['difficulty'], selection=dbm.get_selection(session_id),

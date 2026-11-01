@@ -9,6 +9,7 @@ from datetime import datetime, timedelta, timezone
 from urllib.parse import urlsplit
 
 from flask import g, jsonify, request, session
+from interview_time import normalize_interview
 
 
 def install(app, db, daily_starts=30):
@@ -117,11 +118,11 @@ def install(app, db, daily_starts=30):
                 (SELECT COUNT(*) FROM messages m WHERE m.interview_id=i.id AND m.role='user') AS answered_count
                 FROM interviews i JOIN trial_owners o ON o.interview_id=i.id
                 LEFT JOIN reports r ON r.interview_id=i.id
-                WHERE o.owner_hash=? ORDER BY i.started_at DESC LIMIT ?
+                WHERE o.owner_hash=? ORDER BY interview_timestamp(i.started_at) DESC LIMIT ?
             ''', (owner(), limit)).fetchall()
         items = []
         for row in rows:
-            item = dict(row)
+            item = normalize_interview(row)
             item['selection'] = db.get_selection(item['id'])
             item['has_report'] = item['overall_score'] is not None
             item['can_view_report'] = item['status'] in ('finished', 'ended') and item['answered_count'] > 0

@@ -135,7 +135,7 @@ class ReportRecoveryTests(unittest.TestCase):
                     page.locator('#answerInput').fill('保留这段未提交的草稿')
                     page.locator('#endBtn').click()
                     page.locator('#confirmEndBtn').click()
-                    page.wait_for_function("document.querySelector('#toast').textContent.includes('结束请求暂不可用')")
+                    page.wait_for_function("document.querySelector('#endError').textContent.includes('结束请求暂不可用')")
                     self.assertTrue(page.url.endswith('/interview'))
                     self.assertEqual(page.locator('#answerInput').input_value(), '保留这段未提交的草稿')
                     page.unroute('**/api/interview/end')

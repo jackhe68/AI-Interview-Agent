@@ -80,7 +80,7 @@
   }
   function fmtDate(iso) {
     if (!iso) return "—";
-    return iso.replace("T", " ").slice(0, 16);
+    return window.formatInterviewTime(iso);
   }
   function esc(s) {
     return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {

@@ -1,6 +1,7 @@
 """Self-contained PDF exports from saved report data. No browser, AI, or remote assets."""
 from datetime import datetime, timedelta, timezone
 from io import BytesIO
+from interview_time import display_time
 import math
 from pathlib import Path
 import re
@@ -176,7 +177,7 @@ def build_report_pdf(payload):
     selection = interview.get('selection') or {}
     if selection:
         add(f"练习方向：{selection.get('discipline', '')} / {selection.get('major', '')}", 'small')
-    add(f"开始时间：{clean(interview.get('started_at')).replace('T', ' ')}    作答：{interview.get('answered_count', 0)} 次", 'small')
+    add(f"开始时间：{display_time(interview.get('started_at'))}    作答：{interview.get('answered_count', 0)} 次", 'small')
     seconds = interview.get('duration_sec')
     duration = f'{int(seconds)//60} 分 {int(seconds)%60} 秒' if isinstance(seconds, (int, float)) and seconds >= 0 else '未记录'
     add(f"状态：{'提前结束' if interview.get('status') == 'ended' else '已完成'}    用时：{duration}", 'small')
