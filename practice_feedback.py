@@ -82,6 +82,7 @@ def report_practice(report, messages):
     for key, label in DIMENSIONS:
         entry = saved_dimensions.get(key) or {}
         value = score(report.get(key + '_score')) if key in dict(DIMENSIONS[:4]) else score(entry.get('score'))
+        if detail.get('unassessed'):value=None
         dimensions.append(dict(key=key, label=label, score=value,
                                evidence=text(entry.get('evidence')), reason=text(entry.get('reason')),
                                answer_sequence=entry.get('answer_sequence')))

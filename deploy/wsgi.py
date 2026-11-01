@@ -51,6 +51,9 @@ from werkzeug.middleware.proxy_fix import ProxyFix  # noqa: E402
 
 server.app.wsgi_app = ProxyFix(server.app.wsgi_app, x_for=1, x_proto=1, x_host=1)
 
+from public_test import install as install_ownership
+install_ownership(server.app, server.dbm, daily_starts=None)
+
 # 公网限流：默认开启，防止 DeepSeek 账单被刷、防止并发把 4 核打满。
 # 额度见 api_guard.DEFAULTS（全局 300 次/天、单浏览器 50、单 IP 200、并发 2）。
 # 需要关掉时在 .env 里加 API_GUARD=0。

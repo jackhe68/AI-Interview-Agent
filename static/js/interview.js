@@ -1,5 +1,6 @@
 /* AI Interview Agent：保留文字面试，停止录音后自动 ASR（4.2），手动浏览器 TTS（4.3）。 */
 (function () {
+ function boot() {
   "use strict";
 
   var MAX_ANSWER_CHARS = 4000;
@@ -57,6 +58,7 @@
   var answered = session.answered_count || 0;
   var totalSec = session.elapsed_seconds || 0;
   var busy = false;
+  var ending=false;
   var finished = !!session.finished;
   var questionId = session.question_sequence || 'legacy-' + ((session.progress || {}).main || 1) + '-' + ((session.progress || {}).type || 'main');
   var drafts = new InterviewDrafts(session.session_id);
@@ -67,6 +69,7 @@
   var completionCard = document.getElementById('completionCard');
   function status(text, error) { if (draftStatus.textContent !== text) draftStatus.textContent = text; draftStatus.classList.toggle('is-error',!!error); }
   function saveDraft() {
+    if(window.Account && !Account.ownsPage())return;
     if (finished) return;
     var old = drafts.get(questionId);
     drafts.put(questionId, answerInput.value, old && old.pending);
@@ -79,6 +82,7 @@
     }
   }
   function checkpoint() {
+    if(window.Account && !Account.ownsPage())return;
     session.question_sequence = questionId; session.finished = finished;
     session.answered_count = answered; session.elapsed_seconds = totalSec;
     session.question = questionTextEl.textContent;
@@ -105,7 +109,7 @@
     answerInput.readOnly = finished;
   }
   function displayFeedback(comment) {
-    if (comment) { feedbackBodyEl.textContent = comment; feedbackTagEl.textContent = '点评'; feedbackCard.classList.remove('is-hidden'); }
+    if (comment) { feedbackCard.open=!!finished; feedbackBodyEl.textContent = comment; feedbackTagEl.textContent = '展开详情'; document.querySelector('#feedbackSummary>span').textContent='上一题：'+comment.split('\n')[0].slice(0,70)+(comment.length>70?'…':''); feedbackCard.classList.remove('is-hidden'); }
   }
   function applySnapshot(data) {
     var oldId = questionId, previous = drafts.get(oldId);
@@ -120,11 +124,12 @@
       clearRecording();
     }
     questionId = data.question_sequence;
-    finished = !!data.finished; stateProcessing = !!data.processing;
+    finished = !!data.finished; if(finished)feedbackCard.open=true; stateProcessing = !!data.processing;
     answered = data.answered_count || 0; answeredCountEl.textContent = answered;
     if (Number.isFinite(data.elapsed_seconds)) { totalSec = data.elapsed_seconds; timerTextEl.textContent = fmt(totalSec); }
     session.progress = data.progress; session.question_sequence = questionId;
     showQuestion(data.question,data.progress); displayFeedback(data.comment);
+    if(drafts.importLegacy) drafts.importLegacy(questionId);
     var restored = drafts.get(questionId);
     answerInput.value = !finished && restored ? restored.text : '';
     if (finished) { drafts.clear(); status('作答已保存，最后点评会一直保留，直到你手动查看报告。'); }
@@ -164,7 +169,7 @@
   var backgroundVersion = 0;
   if (session.background_active) backgroundSession.classList.remove('is-hidden');
   fetch('/api/interview/' + encodeURIComponent(session.session_id) + '/background')
-    .then(function (response) { if (!response.ok) return null; return response.json(); })
+    .then(function (response) { return response.json().then(function(data){return response.ok ? data : null;}); })
     .then(function (data) {
       if (data && backgroundVersion === 0) backgroundSession.classList.toggle('is-hidden', !data.active);
     }).catch(function () {});
@@ -233,10 +238,10 @@
 
   /* ---------- 持久化会话（供刷新后恢复当前题） ---------- */
   // Restore local text immediately; verify the current question before submission.
-  showQuestion(session.question,session.progress);
+  showQuestion(!window.Account || Account.scope==='legacy' ? session.question : '正在核对本场面试…',session.progress);
   var storedDraft = drafts.get(questionId);
-  if (!finished && storedDraft) answerInput.value = storedDraft.text;
-  displayFeedback(session.last_comment);
+  if (!finished && storedDraft && (!window.Account || Account.scope==='legacy')) answerInput.value = storedDraft.text;
+  if(!window.Account || Account.scope==='legacy')displayFeedback(session.last_comment);
   answeredCountEl.textContent = answered;
 
   function newRequestId() {
@@ -276,7 +281,7 @@
         clearRecording();
         answered = data.answered_count || answered+1; answeredCountEl.textContent = answered;
         displayFeedback(data.comment);
-        finished = !!data.finished;
+        finished = !!data.finished; if(finished)feedbackCard.open=true;
         questionId = data.question_sequence || (data.next_question ? originalQuestion+3 : originalQuestion);
         session.progress = data.progress;
         if (data.next_question) showQuestion(data.next_question,data.progress);
@@ -376,13 +381,13 @@
     return ['requesting', 'recording', 'stopping', 'uploading', 'recognizing'].indexOf(rec.state) >= 0;
   }
   function syncControls() {
-    var locked = busy || finished || recovering || !stateReady || stateProcessing;
+    var locked = busy || finished || ending || recovering || !stateReady || stateProcessing;
     submitBtn.disabled = skipBtn.disabled = locked || voicePending();
     micBtn.disabled = locked || (voicePending() && rec.state !== 'recording');
     redoBtn.disabled = locked || ['requesting', 'recording', 'stopping'].indexOf(rec.state) >= 0;
     transcribeBtn.disabled = locked || voicePending() || !rec.blob;
-    confirmEndBtn.disabled = busy || recovering;
-    endBtn.disabled = busy || recovering;
+    confirmEndBtn.disabled = busy || recovering || ending;
+    endBtn.disabled = busy || recovering || ending;
     recoverBtn.disabled = busy || recovering;
     document.getElementById('viewReportBtn').disabled = busy || recovering;
     clearDraftBtn.disabled = busy || finished;
@@ -521,6 +526,7 @@
       rec.request = null; setRecState('failed', message);
     }
     request.open('POST', '/api/speech/transcribe');
+    if(window.Account) request.setRequestHeader('X-CSRF-Token',Account.csrf);
     request.timeout = 180000;
     request.upload.onload = function () { if (current()) setRecState('recognizing'); };
     request.onload = function () {
@@ -634,6 +640,12 @@
   syncControls();
 
 
+  var compact=window.matchMedia('(max-width:640px)');
+  var controls=document.querySelector('.iv-controls'),voiceCard=document.querySelector('.voice-card');
+  var originalParent=controls && controls.parentNode;
+  function placeControls(){if(!controls||!voiceCard)return;if(compact.matches)voiceCard.appendChild(controls);else originalParent.appendChild(controls);}
+  placeControls();compact.addEventListener('change',placeControls);
+  var keyboardTimer; if(window.visualViewport)window.visualViewport.addEventListener('resize',function(){clearTimeout(keyboardTimer);keyboardTimer=setTimeout(function(){if(document.activeElement===answerInput)answerInput.scrollIntoView({block:'center'});},100);});
   /* ---------- 跳过此题：提交跳过占位回答 ---------- */
   skipBtn.addEventListener("click", function () {
     if (busy || finished) { showToast(busy ? "AI 正在处理，请稍候" : "本场面试已结束"); return; }
@@ -677,7 +689,7 @@
   });
   confirmEndBtn.addEventListener('click',function () {
     if (busy || finished || confirmEndBtn.disabled) return;
-    saveDraft(); finished=true; confirmEndBtn.disabled=true; cancelEndBtn.disabled=true;
+    saveDraft(); finished=true; ending=true; confirmEndBtn.disabled=true; cancelEndBtn.disabled=true;
     document.getElementById('endError').textContent='正在保存并结束面试，请稍候…';
     stopQuestionSpeech(); clearRecording(); syncControls(); endModal.focus();
     var endController=window.AbortController ? new AbortController() : null;
@@ -689,7 +701,7 @@
       return response.json().then(function (data) { if (!response.ok || !data.finished) throw new Error(data.error || '结束面试失败，请重试'); });
     }).then(function () { drafts.clear();checkpoint();viewReport(); })
       .catch(function (error) {
-        finished=false;confirmEndBtn.disabled=false;cancelEndBtn.disabled=false;syncControls();
+        finished=false;ending=false;confirmEndBtn.disabled=false;cancelEndBtn.disabled=false;syncControls();
         document.getElementById('endError').textContent=error.name==='AbortError' ? '结束结果暂未确认，草稿仍保留，请点击重试。' : error.name==='SyntaxError' ? '连接返回异常，草稿仍保留，请重试。' : error.message && error.message!=='Failed to fetch' ? error.message : '连接暂时中断，回答已保留，请再次点击结束面试。';
         confirmEndBtn.focus();
       }).finally(function () { clearTimeout(endTimer); });
@@ -699,4 +711,6 @@
   updateProgress(session.progress);
   showCompletion();
   recoverState();
+ }
+ if(window.Account) Account.ready.then(boot); else boot();
 })();

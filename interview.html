@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>AI 语音面试 · AI Interview Agent</title>
   <link rel="stylesheet" href="{{ asset_url('css/style.css') }}">
+  <link rel="stylesheet" href="{{ asset_url('css/account.css') }}">
 </head>
 <body>
   <div class="bg-fx"></div>
@@ -74,13 +75,13 @@
         </div>
       </section>
 
-      <section class="glass-card ai-feedback is-hidden" id="aiFeedback">
-        <div class="ai-feedback__head">
+      <details class="glass-card ai-feedback is-hidden" id="aiFeedback">
+        <summary class="ai-feedback__head" id="feedbackSummary">
             <span>上一题点评与改进建议</span>
           <span class="tag" id="feedbackTag">追问</span>
-        </div>
+        </summary>
         <div class="ai-feedback__body" id="feedbackBody"></div>
-      </section>
+      </details>
       <section class="glass-card completion-card is-hidden" id="completionCard">
         <h3>本场作答已完成</h3>
         <p>最后一题的点评已保留在上方。看完建议后，再手动进入面试报告。</p>
@@ -190,6 +191,7 @@
   </div>
 
   <div class="toast" id="toast"></div>
+  <script src="{{ asset_url('js/account.js') }}"></script>
   <script src="{{ asset_url('js/navigation.js') }}"></script>
   <script src="{{ asset_url('js/main.js') }}"></script>
   <script src="{{ asset_url('js/drafts.js') }}"></script>

@@ -138,31 +138,41 @@
     load();
   }
 
+  function historyState(kind,text) {
+    emptyEl.hidden=kind!=='empty';emptyEl.classList.toggle('is-hidden',kind!=='empty');
+    listEl.hidden=kind!=='data';
+    document.getElementById('historyStatus').hidden=!['loading','error'].includes(kind);
+    document.getElementById('historyStatusText').textContent=text||'';
+    document.getElementById('historyRetry').hidden=kind!=='error';
+  }
+  document.getElementById('historyRetry').addEventListener('click',load);
+
   function renderEmpty() {
     listEl.innerHTML = "";
-    emptyEl.classList.remove("is-hidden");
+    historyState("empty");
   }
 
   function renderList(items) {
     if (!items || !items.length) { renderEmpty(); return; }
-    emptyEl.classList.add("is-hidden");
+    historyState("data");
     listEl.innerHTML = items.map(renderRow).join("");
   }
 
   function load() {
+    historyState("loading","正在加载练习记录…");
     fetch("/api/interviews")
       .then(function (res) { return res.json().then(function (d) { return { ok: res.ok, data: d }; }); })
       .then(function (r) {
         if (!r.ok || !r.data || !r.data.items) {
           showError(r.data && r.data.error ? r.data.error : "历史记录暂未加载，请刷新页面重试；原记录仍保留。");
-          emptyEl.classList.add("is-hidden");
+          historyState("error","记录暂未加载，请重试；不会清空已保存内容。");
           return;
         }
         renderList(r.data.items);
       })
       .catch(function () {
         showError("网络暂时中断，请刷新页面重试；原面试记录仍保留。");
-        emptyEl.classList.add("is-hidden");
+        historyState("error","网络暂时中断，请重试加载记录。");
       });
   }
 

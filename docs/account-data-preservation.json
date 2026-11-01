@@ -1,0 +1,38 @@
+[
+  {
+    "database": "interviews.db",
+    "table": "interviews",
+    "existing_rows": 0,
+    "all_original_fields_preserved": true
+  },
+  {
+    "database": "interviews.db",
+    "table": "messages",
+    "existing_rows": 0,
+    "all_original_fields_preserved": true
+  },
+  {
+    "database": "interviews.db",
+    "table": "reports",
+    "existing_rows": 0,
+    "all_original_fields_preserved": true
+  },
+  {
+    "database": "trials.db",
+    "table": "interviews",
+    "existing_rows": 60,
+    "all_original_fields_preserved": true
+  },
+  {
+    "database": "trials.db",
+    "table": "messages",
+    "existing_rows": 432,
+    "all_original_fields_preserved": true
+  },
+  {
+    "database": "trials.db",
+    "table": "reports",
+    "existing_rows": 17,
+    "all_original_fields_preserved": true
+  }
+]

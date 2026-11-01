@@ -14,10 +14,10 @@ AI Interview Agent · Flask 后端（第三阶段）
 - DeepSeek 客户端配置复用 interview_core.py（.env 提供 DEEPSEEK_API_KEY）
 """
 import json
+import math
 import hashlib
 import os
 import re
-import tempfile
 import threading
 import time
 import uuid
@@ -26,7 +26,7 @@ from io import BytesIO
 import database as dbm
 from interview_time import timestamp
 from dotenv import load_dotenv
-from flask import Flask, jsonify, render_template, request, send_file
+from flask import Flask, jsonify, render_template, request, send_file, g
 from openai import OpenAI
 from ai_limits import MAX_OUTPUT_TOKENS
 from interview_catalog import catalog, selection_for, selection_prompt
@@ -36,6 +36,8 @@ from practice_feedback import (REPORT_PRACTICE_INSTRUCTION, normalize_practice,
 
 load_dotenv()
 dbm.init_db()
+from speech_temp import cleanup as cleanup_temporary_audio
+cleanup_temporary_audio(dbm)  # Startup only: no requests are active yet.
 
 # ------------------------------------------------------------------
 # 配置（不打印、不外显任何密钥）
@@ -102,6 +104,7 @@ def interviewer_system_prompt(job, level, background=None, selection=None):
 def call_deepseek(messages, max_tokens=MAX_OUTPUT_TOKENS):
     if client is None:
         raise APIError(503, "AI 服务未配置：服务器缺少 API 密钥，请联系管理员检查 .env 配置")
+    ai_started=time.perf_counter()
     try:
         resp = client.chat.completions.create(
             model=MODEL, messages=messages, max_tokens=max_tokens,
@@ -114,6 +117,9 @@ def call_deepseek(messages, max_tokens=MAX_OUTPUT_TOKENS):
         if "api key" in low or "auth" in low:
             raise APIError(502, "AI 服务鉴权失败，请检查服务器密钥配置")
         raise APIError(502, "AI 服务暂时不可用，请稍后重试")
+    finally:
+        from flask import has_request_context
+        if has_request_context():g.ai_ms=g.get('ai_ms',0)+(time.perf_counter()-ai_started)*1000
     if resp.choices[0].finish_reason == 'length':
         raise APIError(502, 'AI 回复达到长度上限，内容未完整生成，请重试')
     content = resp.choices[0].message.content
@@ -307,23 +313,33 @@ def _generate_report(interview_id):
         '  "expression_score": 0到100的整数,\n'
         '  "job_relevance_score": 0到100的整数,\n'
         '  "knowledge_summary": "一句话总体评价",\n'
-        '  "weaknesses": [{"topic":"薄弱知识点","score":0到100的掌握度,"explanation":"具体解释"}],\n'
+        '  "weaknesses": [{"topic":"练习关注项","answer_sequence":2,"evidence":"回答原文连续摘录","explanation":"基于这段证据的具体说明"}],\n'
         '  "suggestions": ["针对性改进建议"],\n'
         '  "overall_comment": "整场总结"\n'
         "}\n"
         "要求：评分必须基于候选人实际回答内容，薄弱点需对应真实答错或答不全之处，"
         "不得编造未回答问题的评分依据。"
     )
+    prompt_user += '\n不得把跳过、缺少举例等同于没有能力。缺乏依据时写覆盖不足，薄弱点不输出伪精确掌握百分比。'
     prompt_user += REPORT_PRACTICE_INSTRUCTION
     prompt_user += selection_prompt(dbm.get_selection(interview_id), iv['job'])
-    raw = call_deepseek([
-        {"role": "system", "content": "你是资深岗位面试评估专家，根据完整面试记录对大学生求职者进行练习性评价。结合实际岗位评价专业知识，不限于计算机方向。仅基于候选人实际回答评分，不得编造。"},
-        {"role": "user", "content": prompt_user},
-    ], max_tokens=MAX_OUTPUT_TOKENS)
-    data = extract_json(raw)
-    if not data or not isinstance(data, dict):
-        raise APIError(502, "评分结果解析失败，请稍后重试")
-
+    substantive=[p for p in answered_questions(messages) if p['answer'].strip() and p['answer'].strip()!='（候选人选择跳过此题）']
+    unassessed=not substantive
+    if unassessed:
+        data=dict(knowledge_score=0,completeness_score=0,expression_score=0,job_relevance_score=0,weaknesses=[],suggestions=['选择一道题补充具体回答，再进行练习。'],overall_comment='本场没有足够的实际回答依据，暂不评分；跳过题目不能说明缺乏能力。',knowledge_summary='回答覆盖不足，暂未评分')
+    else:
+        raw = call_deepseek([
+            {"role": "system", "content": "你是资深岗位面试评估专家，根据完整面试记录对大学生求职者进行练习性评价。结合实际岗位评价专业知识，不限于计算机方向。仅基于候选人实际回答评分，不得编造。"},
+            {"role": "user", "content": prompt_user},
+        ], max_tokens=MAX_OUTPUT_TOKENS)
+        data = extract_json(raw)
+        if not data or not isinstance(data, dict):
+            raise APIError(502, "评分结果解析失败，请稍后重试")
+    if not unassessed:
+        for key in ('knowledge_score','completeness_score','expression_score','job_relevance_score'):
+            value=data.get(key)
+            if isinstance(value,bool) or not isinstance(value,(int,float)) or not math.isfinite(value) or not 0<=value<=100:
+                raise APIError(502,'评分字段不完整，已保留作答与点评，请稍后重试生成报告')
     k = clamp_score(data.get("knowledge_score", 0))
     c = clamp_score(data.get("completeness_score", 0))
     e = clamp_score(data.get("expression_score", 0))
@@ -335,18 +351,14 @@ def _generate_report(interview_id):
         + jr * SCORE_WEIGHTS["job_relevance"]
     ))
 
-    weaknesses = data.get("weaknesses") or []
-    if isinstance(weaknesses, list):
-        weaknesses = [
-            {
-                "topic": str(w.get("topic", "未知薄弱点")).strip(),
-                "score": clamp_score(w.get("score", 50)),
-                "explanation": str(w.get("explanation", "")).strip(),
-            }
-            for w in weaknesses if isinstance(w, dict)
-        ][0:6]
-    else:
-        weaknesses = []
+    pairs={p['answer_sequence']:p for p in substantive}
+    weaknesses=[]
+    for item in data.get('weaknesses',[]) if isinstance(data.get('weaknesses'),list) else []:
+        if not isinstance(item,dict):continue
+        seq=item.get('answer_sequence');evidence=item.get('evidence')
+        if not isinstance(seq,int) or not isinstance(evidence,str) or not evidence.strip() or seq not in pairs or evidence not in pairs[seq]['answer']:continue
+        weaknesses.append(dict(topic=str(item.get('topic','练习关注项'))[:120],score=None,explanation=str(item.get('explanation',''))[:1000],evidence=evidence[:1000],answer_sequence=seq))
+    weaknesses=weaknesses[:6]
 
     suggestions = data.get("suggestions") or []
     if isinstance(suggestions, list):
@@ -373,7 +385,7 @@ def _generate_report(interview_id):
         "overall_comment": overall_comment,
         "knowledge_summary": knowledge_summary,
         "confidence_note": confidence_note,
-        "detail": {"raw_dim_count": 4, **normalize_practice(data, messages)},
+        "detail": {"unassessed":unassessed, "scoring_version":"practice-v2-coverage", "raw_dim_count": 4, **normalize_practice(data, messages)},
     }
     dbm.save_report(report)
     # Optional voice advice is requested separately after the score is displayed.
@@ -407,8 +419,8 @@ def report_job_payload(interview_id, retry=False):
     job = REPORT_JOB_SERVICE.ensure(interview_id, subjects, retry=retry)
     partial = answered_questions(dbm.get_messages(interview_id))
     if job['state'] == 'failed':
-        return {'available': False, 'reason': 'failed', 'task_state': 'failed', 'error': job['error'], 'partial': partial}, 503
-    return {'available': False, 'reason': 'generating', 'task_state': job['state'], 'partial': partial,
+        return {'available': False, 'reason': 'failed', 'task_state': 'failed', 'task_id':hashlib.sha256(interview_id.encode()).hexdigest()[:16], 'error': job['error'], 'partial': partial}, 503
+    return {'available': False, 'reason': 'generating', 'task_state': job['state'], 'task_id':hashlib.sha256(interview_id.encode()).hexdigest()[:16], 'partial': partial,
             'message': '正在等待分析，您可以离开，稍后从历史记录查看。' if job['state']=='pending' else 'AI 正在分析回答并整理报告，您可以离开，稍后回来查看。'}, 202
 
 
@@ -459,6 +471,7 @@ def report_to_json(interview_id, allow_generate=True, background=False):
             "job": iv["job"],
             "difficulty": iv["difficulty"],
             "selection": dbm.get_selection(interview_id),
+            "practice_profile": dbm.get_profile_snapshot(interview_id),
             "started_at": iv["started_at"],
             "ended_at": iv["ended_at"],
             "status": iv["status"],
@@ -466,14 +479,14 @@ def report_to_json(interview_id, allow_generate=True, background=False):
             "duration_sec": duration,
         },
         "scores": {
-            "overall": report["overall_score"],
-            "knowledge": report["knowledge_score"],
-            "completeness": report["completeness_score"],
-            "expression": report["expression_score"],
-            "job_relevance": report["job_relevance_score"],
+            "overall": None if report.get("detail",{}).get("unassessed") else report["overall_score"],
+            "knowledge": None if report.get("detail",{}).get("unassessed") else report["knowledge_score"],
+            "completeness": None if report.get("detail",{}).get("unassessed") else report["completeness_score"],
+            "expression": None if report.get("detail",{}).get("unassessed") else report["expression_score"],
+            "job_relevance": None if report.get("detail",{}).get("unassessed") else report["job_relevance_score"],
         },
-        "grade": grade_of(report["overall_score"]),
-        "weaknesses": report["weaknesses"],
+        "grade": "覆盖不足 · 未评分" if report.get("detail",{}).get("unassessed") else grade_of(report["overall_score"]),
+        "weaknesses": [dict(item,score=None) for item in report["weaknesses"]],
         "suggestions": report["suggestions"],
         "overall_comment": report["overall_comment"],
         "knowledge_summary": report["knowledge_summary"],
@@ -597,9 +610,8 @@ def api_transcribe():
         return jsonify({"success": False, "error": "语音识别服务未就绪，请联系管理员安装 faster-whisper"}), 503
 
     # 安全临时文件：用户无法控制服务端路径
-    tmp = tempfile.NamedTemporaryFile(delete=False, suffix=ext, dir=tempfile.gettempdir())
-    tmp_path = tmp.name
-    tmp.close()
+    from speech_temp import create as create_temporary_audio
+    tmp_path = create_temporary_audio(dbm,analysis_session_id,ext)
     try:
         size = 0
         with open(tmp_path, "wb") as out:
@@ -635,6 +647,8 @@ def api_transcribe():
             "text": text,
             "duration": round(duration, 1) if duration else None,
         }
+        if analysis_session_id and not dbm.interview_exists(analysis_session_id):
+            return jsonify(success=False,error='这场练习已被删除，识别结果不再保留'),404
         # Opt-in, ephemeral measurements. ASR and scoring remain independent.
         if include_analysis:
             try:
@@ -672,6 +686,11 @@ def api_start():
     try:
         selection = selection_for(data.get('major_id'), job)
         background = normalize_background(data.get('background'), data.get('background_consent'))
+        if not isinstance(data.get('profile_consent',False),bool):raise ValueError('资料使用选项格式不正确')
+        user=g.get('current_user')
+        if data.get('profile_consent'):
+            if not user:raise ValueError('请先登录后选择使用账户资料')
+            background = normalize_background(dict(background,major=user['major'],stage=user['grade_label']),True)
     except ValueError as exc:
         return jsonify(error=str(exc)), 400
 
@@ -687,6 +706,8 @@ def api_start():
     try:
         dbm.create_interview(session_id, job, level, background=background, selection=selection)
         dbm.add_message(session_id, "assistant", first_q, "main_question", 1)
+        if user:
+            with dbm.get_conn() as conn:conn.execute('INSERT INTO interview_profile_snapshots VALUES (?,?,?,?,?)',(session_id,user['major'],user['grade_label'],int(data.get('profile_consent',False)),'profile-consent-v1'))
     except Exception:
         try:
             dbm.delete_interview(session_id)
@@ -761,6 +782,9 @@ def api_answer():
     answer = data.get('answer')
     if not isinstance(session_id, str) or not isinstance(answer, str):
         return jsonify(error='回答或面试标识格式不正确'), 400
+    try:answer.encode('utf-8')
+    except UnicodeError:return jsonify(error='回答含不支持的字符，请重新输入'),400
+    if any(ord(c)<32 and c not in '\n\r\t' for c in answer):return jsonify(error='回答含不支持的控制字符'),400
     answer = answer.strip()
     analysis_id = data.get('analysis_id') or None
     request_id = data.get('request_id')
@@ -935,6 +959,15 @@ def api_clear_background(session_id):
     dbm.clear_background(session_id)
     return jsonify(cleared=True)
 
+
+import sys as _sys
+from accounts import install as install_accounts
+app.config['APP_INSECURE'] = os.getenv('APP_INSECURE') == '1'
+install_accounts(app,dbm,_sys.modules[__name__])
+from observability import install as install_observability
+install_observability(app)
+from reanswer import install as install_reanswer
+install_reanswer(app,dbm)
 
 if __name__ == "__main__":
     from candidate_background import start_cleanup

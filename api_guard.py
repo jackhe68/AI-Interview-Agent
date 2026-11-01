@@ -45,7 +45,7 @@ class PublicAPIGuard:
     def identities(self):
         if g.get('report_subjects'):
             return tuple(g.report_subjects)
-        browser = session.get('trial_browser')
+        browser = 'user:'+g.current_user['id'] if g.get('current_user') else session.get('trial_browser')
         if not browser:
             browser = secrets.token_hex(32)
             session['trial_browser'] = browser
@@ -108,7 +108,7 @@ class PublicAPIGuard:
                     selection_for(data.get('major_id'), data['job'])
                 except ValueError as exc:
                     return jsonify(error=str(exc)),400
-            allowed = {'api_start':{'job','level','major_id','background','background_consent'},'api_answer':{'session_id','answer','analysis_id','request_id','question_sequence'},'api_end':{'session_id'}}[request.endpoint]
+            allowed = {'api_start':{'job','level','major_id','background','background_consent','profile_consent'},'api_answer':{'session_id','answer','analysis_id','request_id','question_sequence'},'api_end':{'session_id'}}[request.endpoint]
             if set(data)-allowed:
                 return jsonify(error='请求包含不支持的参数，请从面试页面操作'),400
             if request.endpoint == 'api_answer':
@@ -147,8 +147,8 @@ class PublicAPIGuard:
 
 def install(server, db, limits=None, trust_cloudflare=False):
     guard = PublicAPIGuard(server.app, db, limits=limits, trust_cloudflare=trust_cloudflare)
-    # Initialize/reuse the same browser cookie before ownership parses JSON/form data.
-    server.app.before_request_funcs[None].insert(0, guard.check_request)
+    # Keep the timer first, then resolve account and record ownership before consuming quotas.
+    server.app.before_request_funcs[None].append(guard.check_request)  # Identity/ownership resolve before per-account quotas.
     @server.app.after_request
     def retry_hint(response):
         if g.get('api_limit_message') and response.status_code>=400:

@@ -4,7 +4,8 @@
   var PREFIX = 'iv-answer-draft-v1:';
   var TTL = 24 * 60 * 60 * 1000;
   window.InterviewDrafts = function (sid) {
-    var namespace = PREFIX + encodeURIComponent(sid) + ':';
+    var identity=window.Account && Account.scope;
+    var namespace = identity && identity!=='legacy' ? 'iv-answer-draft-v2:'+encodeURIComponent(identity)+':'+encodeURIComponent(sid)+':' : PREFIX+encodeURIComponent(sid)+':';
     var memory = {};
     var self = this;
     this.available = true;
@@ -24,7 +25,14 @@
         return item;
       } catch (error) { return null; }
     };
+    this.importLegacy = function(question) {
+      if(!identity || identity.indexOf('guest:')!==0 || !window.Account || !Account.ownsPage())return;
+      try {var legacy=PREFIX+encodeURIComponent(sid)+':'+question,item=JSON.parse(localStorage.getItem(legacy)||'null');
+       if(item && typeof item.text==='string' && Date.now()-item.updated_at<TTL && !localStorage.getItem(namespace+question)){localStorage.setItem(namespace+question,JSON.stringify(item));localStorage.removeItem(legacy);}
+      }catch(e){}
+    };
     this.put = function (question, text, pending) {
+      if(window.Account && !Account.ownsPage())return;
       var key = namespace + question;
       var item = {text:text, pending:pending || null, updated_at:Date.now()};
       if (!text && !pending) { this.remove(question); return; }
@@ -44,7 +52,7 @@
       } catch (error) { self.available = false; }
     };
     try {
-      Object.keys(localStorage).filter(function (key) { return key.indexOf(PREFIX) === 0; }).forEach(function (key) {
+      Object.keys(localStorage).filter(function (key) { return key.indexOf(PREFIX) === 0 || key.indexOf('iv-answer-draft-v2:') === 0; }).forEach(function (key) {
         try {
           var item = JSON.parse(localStorage.getItem(key));
           if (!item || typeof item.updated_at !== 'number' || Date.now()-item.updated_at > TTL) localStorage.removeItem(key);

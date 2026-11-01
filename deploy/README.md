@@ -2,6 +2,8 @@
 
 面向：`mymianshiguan.cn` + 大陆地域轻量应用服务器。香港/海外机器也能用，只是不需要备案。
 
+账户版升级、备份、恢复和安全回滚，先阅读 [账户运维交付](../docs/accounts-and-operations.md)。请用新备份工具同时保存数据库与删除台账，单独恢复旧数据库可能复活已删除数据。
+
 ## 0. 前置
 
 - 服务器已开通，公网 IP 已知，`ssh root@IP` 能登录
@@ -76,5 +78,5 @@ journalctl -u aiinterview -f           # 实时日志
 
 - **不要改成 gunicorn -w N**，单进程多线程是设计前提。
 - 升级依赖时改 `deploy/requirements.txt` 再 `pip install -r`，不要 `pip install -U` 全量升。
-- 根目录 5 个 `.html` 是模板（`template_folder="."`），别挪进 `templates/`。
+- 根目录各 `.html` 是模板（`template_folder="."`），别挪进 `templates/`。
 - 试用入口 `tools/run_public_test.py`（Cloudflare Tunnel + trials.db）与正式站互不影响，别在生产机上跑。

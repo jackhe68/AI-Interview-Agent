@@ -265,3 +265,7 @@ docs/pdf-export-validation/
 *.mp4
 *.aac
 *.db
+
+*.deletions.jsonl
+
+.speech-temp/

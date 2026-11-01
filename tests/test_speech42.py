@@ -22,6 +22,7 @@ def tracked_connection():
 database.get_conn = tracked_connection
 import app as server
 server.app.config['REPORT_JOBS_INLINE'] = True
+server.app.config.update(SECURITY_TEST_BYPASS=True,APP_INSECURE=True,SESSION_COOKIE_SECURE=False)
 import speech
 
 def tearDownModule():

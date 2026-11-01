@@ -37,6 +37,7 @@
         if (data.finished) { location.href = '/report?id=' + encodeURIComponent(sid); return; }
         var old;
         try { old = JSON.parse(localStorage.getItem('iv-session') || 'null'); } catch (e) { old = null; }
+        if(window.Account && !Account.ownsPage())throw new Error("账户已切换，请刷新页面");
         var cached = {session_id:sid, job:data.job, level:data.level, selection:data.selection || {},
           question:data.question, question_sequence:data.question_sequence, progress:data.progress,
           answered_count:data.answered_count, background_active:!!data.background_active,

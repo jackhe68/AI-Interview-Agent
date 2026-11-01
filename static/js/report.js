@@ -108,6 +108,8 @@
   function animateScore(target) {
     var ringValue = el("ringValue");
     var scoreNum = el("scoreNum");
+    scoreNum.parentNode.querySelector('small').hidden=typeof target!=='number';
+    if(typeof target!=='number'){scoreNum.textContent='未评分';ringValue.setAttribute('stroke-dashoffset',String(RING_CIRC));return;}
     var start = null, dur = 1500;
     function tick(ts) {
       if (!start) start = ts;
@@ -129,6 +131,7 @@
     html += '<span class="badge">岗位：' + esc(iv.job) + '</span>';
     html += '<span class="badge">难度：' + esc(iv.difficulty) + '</span>';
     if (iv.selection && iv.selection.major) html += '<span class="badge">专业：' + esc(iv.selection.major) + '</span>';
+    if(iv.practice_profile && iv.practice_profile.consent) html += '<span class="badge">本场背景：'+esc(iv.practice_profile.major)+' · '+esc(iv.practice_profile.grade)+'</span>';
     html += '<span class="badge">' + fmtDate(iv.started_at) + '</span>';
     if (iv.duration_sec != null) html += '<span class="badge">时长：' + fmtDuration(iv.duration_sec) + '</span>';
     html += '<span class="badge">答题：' + iv.answered_count + ' 次</span>';
@@ -143,8 +146,8 @@
     DIM_KEYS.forEach(function (k, i) {
       var v = scores[k];
       html += '<div class="score-sub__item">'
-        + '<div class="row"><span>' + DIM_LABELS[i] + ' <small style="color:var(--text-3)">权重 ' + DIM_WEIGHTS[i] + '</small></span><b>' + v + '</b></div>'
-        + '<div class="track"><div class="fill" data-w="' + v + '"></div></div>'
+        + '<div class="row"><span>' + DIM_LABELS[i] + ' <small style="color:var(--text-3)">权重 ' + DIM_WEIGHTS[i] + '</small></span><b>' + (typeof v==='number'?v:'未评估') + '</b></div>'
+        + '<div class="track"><div class="fill" data-w="' + (typeof v==='number'?v:0) + '"></div></div>'
         + '</div>';
     });
     sub.innerHTML = html;
@@ -184,8 +187,7 @@
     weaknesses.forEach(function (w) {
       var pct = w.score;
       html += '<div class="weak-item">'
-        + '<div class="row"><span class="name">' + esc(w.topic) + '</span><span class="pct">掌握度 ' + pct + '%</span></div>'
-        + '<div class="track"><div class="fill" data-w="' + pct + '"></div></div>'
+        + '<div class="row"><span class="name">' + esc(w.topic) + '</span><span class="pct">练习关注项</span></div>'
         + (w.explanation ? '<div style="font-size:12px;color:var(--text-2);margin-top:6px;line-height:1.6;">' + esc(w.explanation) + '</div>' : '')
         + '</div>';
     });
@@ -271,7 +273,7 @@
         + (r.reference_answer ? '<details class="reference-answer"><summary>展开参考回答，与你的回答对照</summary><p>' + esc(r.reference_answer) + '</p></details>' : '<p class="practice-intro">这份报告没有可用的参考回答；历史报告保留原有数据，不补造内容。</p>')
         + paragraph('下一步怎么练', r.practice_task)
         + (checks.length ? '<p class="review-label">重答后自查</p><ul>' + checks.map(function (s) { return '<li>' + esc(s) + '</li>'; }).join('') + '</ul>' : '')
-        + '</details>';
+        + '<button type="button" class="btn btn--outline reanswer-open" data-sequence="'+r.answer_sequence+'">保存一次重答练习</button></details>';
     }).join('');
   }
 
@@ -635,6 +637,7 @@
             return;
           }
           try {
+            if(window.Account && !Account.ownsPage())throw new Error("账户已切换，请刷新页面");
             localStorage.setItem("iv-session", JSON.stringify({
               session_id: r.data.session_id, job: r.data.job, level: r.data.level,
               selection: r.data.selection || {},

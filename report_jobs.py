@@ -1,5 +1,6 @@
 """Persistent single-worker report queue. Leases recover abandoned work on revisit."""
 import json
+import hashlib
 import threading
 import time
 import uuid
@@ -76,18 +77,20 @@ class ReportJobs:
                 stop = threading.Event()
                 pulse = threading.Thread(target=self.heartbeat, args=(sid,token,stop), daemon=True)
                 pulse.start()
-                error = ''
+                error = '';started=time.perf_counter();provider_ms=0;db_ms=0
                 try:
                     from flask import g
                     with self.app.test_request_context('/internal/report-job'):
                         g.report_subjects = json.loads(job['subjects'])
-                        self.generate(sid)
+                        try:self.generate(sid)
+                        finally:provider_ms=g.get('ai_ms',0);db_ms=g.get('db_ms',0)
                 except Exception as exc:
                     error = getattr(exc, 'message', '报告暂时生成失败，请稍后点击重试；面试记录已保留。')
                     self.app.logger.warning('Report job failed (%s)', type(exc).__name__)
                 finally:
                     stop.set()
                     pulse.join(timeout=1)
+                    self.app.logger.info(json.dumps(dict(event='report_task_timing',task_id=hashlib.sha256(sid.encode()).hexdigest()[:16],total_ms=round((time.perf_counter()-started)*1000,2),ai_ms=round(provider_ms,2),db_ms=round(db_ms,2),state='failed' if error else 'done')))
                 with self.db.get_conn() as conn:
                     conn.execute('UPDATE report_jobs SET state=?,error=?,lease_until=0,updated_at=? WHERE interview_id=? AND token=?',
                                  ('failed' if error else 'done',error,time.time(),sid,token))

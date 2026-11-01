@@ -286,6 +286,7 @@
         payload.background_consent = true;
       }
     }
+    if(window.Account && Account.profileConsent) payload.profile_consent=Account.profileConsent();
     starting = true;
     syncUI();
     var original = startBtn.innerHTML;
@@ -312,6 +313,7 @@
         }
         // 保存会话与配置，供面试页读取
         try {
+          if(window.Account && !Account.ownsPage())throw new Error("账户已切换，请刷新页面");
           localStorage.setItem("iv-config", JSON.stringify({ job: r.data.job, level: r.data.level, major_id: r.data.selection && r.data.selection.major_id || null }));
           localStorage.setItem("iv-session", JSON.stringify({
             session_id: r.data.session_id,

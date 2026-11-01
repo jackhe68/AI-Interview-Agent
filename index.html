@@ -6,6 +6,7 @@
   <title>AI Interview Agent · AI 模拟面试系统</title>
   <link rel="stylesheet" href="{{ asset_url('css/style.css') }}">
   <link rel="stylesheet" href="{{ asset_url('css/home.css') }}">
+  <link rel="stylesheet" href="{{ asset_url('css/account.css') }}">
 </head>
 <body class="home-page">
   <div class="bg-fx"></div>
@@ -73,7 +74,7 @@
             <div class="config__label"><span class="step-no">1</span>选择练习方向</div>
             <div class="entry-modes" role="group" aria-label="选择岗位查找方式">
               <button class="entry-mode is-selected" type="button" data-mode="major" aria-pressed="true"><b>按专业找岗位</b><span>还在探索方向，从专业开始</span></button>
-              <button class="entry-mode" type="button" data-mode="direct" aria-pressed="false"><b>直接选岗位</b><span>已有目标，保留原有快捷入口</span></button>
+              <button class="entry-mode" type="button" data-mode="direct" aria-pressed="false"><b>直接选岗位</b><span>已有目标，直接选择目标岗位</span></button>
             </div>
             <div id="majorPath" class="major-path">
               <div class="path-label">先选学科</div>
@@ -229,6 +230,7 @@
 
   <div class="toast" id="toast"></div>
   <script id="interviewCatalog" type="application/json">{{ interview_catalog | tojson }}</script>
+  <script src="{{ asset_url('js/account.js') }}"></script>
   <script src="{{ asset_url('js/navigation.js') }}"></script>
   <script src="{{ asset_url('js/main.js') }}"></script>
 </body>

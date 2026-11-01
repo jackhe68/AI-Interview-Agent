@@ -1,0 +1,98 @@
+[
+  {
+    "target": "local",
+    "sample": 1,
+    "ms": 4.52,
+    "total_ms": 4.8,
+    "status": 200,
+    "server_timing": "app;dur=3.24, db;dur=0.00, ai;dur=0.00"
+  },
+  {
+    "target": "local",
+    "sample": 2,
+    "ms": 4.35,
+    "total_ms": 4.57,
+    "status": 200,
+    "server_timing": "app;dur=3.26, db;dur=0.00, ai;dur=0.00"
+  },
+  {
+    "target": "local",
+    "sample": 3,
+    "ms": 4.22,
+    "total_ms": 4.42,
+    "status": 200,
+    "server_timing": "app;dur=3.20, db;dur=0.00, ai;dur=0.00"
+  },
+  {
+    "target": "local",
+    "sample": 4,
+    "ms": 4.22,
+    "total_ms": 4.4,
+    "status": 200,
+    "server_timing": "app;dur=3.16, db;dur=0.00, ai;dur=0.00"
+  },
+  {
+    "target": "local",
+    "sample": 5,
+    "ms": 4.19,
+    "total_ms": 4.38,
+    "status": 200,
+    "server_timing": "app;dur=3.27, db;dur=0.00, ai;dur=0.00"
+  },
+  {
+    "target": "local",
+    "sample": 6,
+    "ms": 4.09,
+    "total_ms": 4.28,
+    "status": 200,
+    "server_timing": "app;dur=3.15, db;dur=0.00, ai;dur=0.00"
+  },
+  {
+    "target": "public",
+    "sample": 1,
+    "ms": 469.93,
+    "total_ms": 478.1,
+    "status": 200,
+    "server_timing": "app;dur=3.53, db;dur=0.00, ai;dur=0.00"
+  },
+  {
+    "target": "public",
+    "sample": 2,
+    "ms": 1077.05,
+    "total_ms": 1087.2,
+    "status": 200,
+    "server_timing": "app;dur=3.67, db;dur=0.00, ai;dur=0.00"
+  },
+  {
+    "target": "public",
+    "sample": 3,
+    "ms": 576.73,
+    "total_ms": 587.14,
+    "status": 200,
+    "server_timing": "app;dur=3.54, db;dur=0.00, ai;dur=0.00"
+  },
+  {
+    "target": "public",
+    "sample": 4,
+    "ms": 533.58,
+    "total_ms": 543.25,
+    "status": 200,
+    "server_timing": "app;dur=3.79, db;dur=0.00, ai;dur=0.00"
+  },
+  {
+    "target": "public",
+    "sample": 5,
+    "ms": 546.42,
+    "total_ms": 552.97,
+    "status": 200,
+    "server_timing": "app;dur=3.68, db;dur=0.00, ai;dur=0.00"
+  },
+  {
+    "target": "public",
+    "sample": 6,
+    "ms": 534.56,
+    "total_ms": 539.35,
+    "status": 200,
+    "server_timing": "app;dur=3.45, db;dur=0.00, ai;dur=0.00"
+  }
+]

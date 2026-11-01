@@ -1,0 +1,28 @@
+[
+  {
+    "event": "request_timing",
+    "request_id": "4a5c0e14b24be06c",
+    "endpoint": "api_answer",
+    "status": 200,
+    "app_ms": 3186.3,
+    "db_ms": 10.04,
+    "ai_ms": 3175.18
+  },
+  {
+    "event": "request_timing",
+    "request_id": "955252a794cfddc1",
+    "endpoint": "api_answer",
+    "status": 200,
+    "app_ms": 2.75,
+    "db_ms": 2.39,
+    "ai_ms": 0
+  },
+  {
+    "event": "report_task_timing",
+    "task_id": "2902c6173edc078e",
+    "total_ms": 34363.41,
+    "ai_ms": 34343.18,
+    "db_ms": 6.78,
+    "state": "done"
+  }
+]

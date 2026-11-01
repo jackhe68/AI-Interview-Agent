@@ -181,8 +181,8 @@ def build_report_pdf(payload):
     seconds = interview.get('duration_sec')
     duration = f'{int(seconds)//60} 分 {int(seconds)%60} 秒' if isinstance(seconds, (int, float)) and seconds >= 0 else '未记录'
     add(f"状态：{'提前结束' if interview.get('status') == 'ended' else '已完成'}    用时：{duration}", 'small')
-    add(f"综合得分  {scores.get('overall', '-')} / 100    {payload.get('grade', '')}", 'score')
-    weighted = [f"{label}：{scores.get(key, '-')} / 100（权重 {weight}）" for key, label, weight in [
+    add(f"综合得分  {scores.get('overall') if scores.get('overall') is not None else '未评分'} / 100    {payload.get('grade', '')}", 'score')
+    weighted = [f"{label}：{scores.get(key) if scores.get(key) is not None else '未评估'} / 100（权重 {weight}）" for key, label, weight in [
         ('knowledge', '专业知识', '40%'), ('completeness', '回答完整性', '30%'),
         ('expression', '逻辑表达', '20%'), ('job_relevance', '岗位相关性', '10%')]]
     table([weighted[:2], weighted[2:]], [width/2, width/2])

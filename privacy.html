@@ -1,0 +1,18 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>资料与删除说明 · AI Interview Agent</title><link rel="stylesheet" href="{{ asset_url('css/style.css') }}"><link rel="stylesheet" href="{{ asset_url('css/account.css') }}"></head><body><header class="nav">
+    <div class="container nav__inner">
+      <a class="nav__logo" href="/">
+        <span class="nav__logo-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2a4 4 0 0 1 4 4v5a4 4 0 0 1-8 0V6a4 4 0 0 1 4-4z"/>
+            <path d="M5 10v1a7 7 0 0 0 14 0v-1"/>
+            <path d="M12 18v4"/>
+          </svg>
+        </span>
+        AI Interview Agent
+      </a>
+      <nav class="nav__links">
+        <a class="nav__link" href="/">返回首页</a>
+        <a class="nav__link" href="/history">历史面试</a>
+      </nav>
+    </div>
+  </header><main class="container account-layout"><section class="glass-card account-card"><h1>资料、游客记录与删除说明</h1><h2>长期账户资料</h2><p>账户保存用户名、安全密码哈希、昵称、专业和学习阶段，用于登录、资料展示和本地推荐。昵称不要求实名，不自动发给AI。用户名用于登录，昵称不用于找回账户。</p><h2>本场背景与第三方服务</h2><p>问题和回答会发送给DeepSeek用于模拟面试与练习反馈。账户资料默认不作为本场背景发送；开始前可单独选择允许使用专业和年级，可随时清除本场背景。自行填写的技能、项目、经历等背景也需要单独同意。背景只服务本场，最长保留24小时，后台每5分钟巡检，读取时也会清理过期数据；结束或删除面试时清除。</p><p>撤销背景授权影响之后的请求，不承诺撤回已经发送给第三方的数据。录音转写在本机服务处理，临时上传文件处理结束后清理，注销和重启时也会清理可识别的专用目录文件，不作为永久录音保存；已关联的音频指标与文字记录随练习保留。</p><h2>游客与账户归属</h2><p>游客凭据存在当前浏览器Cookie，丢失Cookie、换浏览器或换网址后没有自助恢复保证。登录不会自动合并游客记录，需在个人中心确认迁移。已绑定账户的记录不能被另一账户或旧游客凭据再次认领。登录后可在其他设备使用用户名密码查看已保存的账户记录。</p><h2>删除与注销</h2><p>删除一场练习会清理该场对话、背景、报告、任务、语音指标与重答。注销需再次输入当前密码和明确确认，将清理账户资料与关联练习，并撤销全部登录会话。正在执行的任务不一定立即中断，但不能恢复被删记录，临时文件在处理退出时清理。</p><p>普通应用日志只记请求关联号、接口名称、耗时与错误类型，不记录密码、Cookie、令牌、简历或回答正文。既有备份不会随注销自动重写。服务另外保存不含姓名、正文或密码的删除标识摘要，恢复旧备份启动时再次应用已记录的删除；管理员应保护并保留该删除台账，并按策略清理旧备份。如果台账同时丢失，不能保证自动追溯备份之后的删除。第三方服务已收到的数据按其处理规则执行。本版本无短信或邮件找回入口，不能凭昵称、专业等公开资料重置密码。</p><h2>练习评分与重答</h2><p>AI反馈仅供练习参考，证据不足显示未评估，不代表没有能力。重答入口仅保存练习稿，不调用AI、不重新评分，保留原评分版本，避免与不同规则的分数直接比较。</p><a class="btn btn--outline" href="/account">个人中心</a></section></main><script src="{{ asset_url('js/account.js') }}"></script><script src="{{ asset_url('js/navigation.js') }}"></script><script src="{{ asset_url('js/main.js') }}"></script></body></html>

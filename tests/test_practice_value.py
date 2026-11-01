@@ -172,6 +172,8 @@ class PracticeValueTests(unittest.TestCase):
                         page.locator('#submitAnswerBtn').click()
                         page.wait_for_function("document.querySelector('#questionText').textContent.includes('如何验证索引效果')")
                         self.assertTrue(page.locator('#aiFeedback').is_visible())
+                        self.assertFalse(page.locator('#aiFeedback').evaluate('(node)=>node.open'))
+                        page.locator('#feedbackSummary').click()
                         self.assertIn('排查步骤', page.locator('#feedbackBody').inner_text())
                         self.assertEqual(errors, [])
                         page.close()

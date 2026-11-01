@@ -1,0 +1,7 @@
+{
+  "guest_start_confirmation": true,
+  "live_mobile_account": true,
+  "live_guest_empty_exclusive": true,
+  "live_privacy": true,
+  "no_page_errors": true
+}

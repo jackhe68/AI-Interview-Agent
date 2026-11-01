@@ -1377,3 +1377,12 @@ textarea, input, select { font-family: inherit; }
 #reportEmpty:has(+ #partialReport:not(.is-hidden)) .empty-state__icon { display:none; }
 #reportEmpty:has(+ #partialReport:not(.is-hidden)) .empty-state__title { font-size:18px; margin-bottom:8px; }
 #reportEmpty:has(+ #partialReport:not(.is-hidden)) .empty-state__desc { margin-bottom:16px; }
+
+/* Explicit view states override display:grid on empty-state containers. */
+[hidden],.is-hidden {display:none !important;}
+.ai-feedback>summary {cursor:pointer;min-height:44px;}
+.ai-feedback {padding:18px;}
+@media(min-width:1025px){.iv-main{grid-template-columns:minmax(0,1.8fr) minmax(260px,.8fr);}.iv-stage{padding:20px;}.orb{transform:scale(.8);}.text-input-row textarea{min-height:320px;}}
+@media(max-width:640px){.iv-stage{display:none;}.voice-card .iv-controls{margin-top:16px;}.text-input-row textarea{min-height:280px;scroll-margin-bottom:120px;}.voice-card{padding:18px;}.text-input-card{padding:18px;} .iv-main{padding-bottom:80px;} }
+
+@media(max-width:640px){.voice-card .iv-controls{display:grid;grid-template-columns:minmax(0,1fr) 64px minmax(0,1fr);gap:8px;width:100%;}.voice-card .ctl-side{min-width:0;gap:6px;}.voice-card .ctl-side .btn{min-width:0;padding:8px;font-size:12px;}.voice-card .mic-btn{width:64px;height:64px;}.voice-card .badge{font-size:11px;padding:6px;}.ai-feedback__head>span:first-child{min-width:0;overflow-wrap:anywhere;flex:1;}.ai-feedback__head .tag{flex-shrink:0;}}

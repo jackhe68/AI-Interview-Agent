@@ -20,6 +20,9 @@ def normalize_background(raw, consent=False):
         value = raw.get(key, '')
         if not isinstance(value, str) or len(value) > maximum:
             raise ValueError('个人背景内容过长或格式不正确，请精简后重试')
+        try:value.encode('utf-8')
+        except UnicodeError:raise ValueError('背景含不支持的字符，请重新输入') from None
+        if any(ord(c)<32 and c not in '\n\r\t' for c in value):raise ValueError('背景含不支持的控制字符')
         value = value.strip()
         if value:
             cleaned[key] = value

@@ -24,7 +24,7 @@ try:
 except FileExistsError:
     pass
 server.app.config.update(SECRET_KEY=secret_path.read_text(encoding='ascii').strip(),
-                         SESSION_COOKIE_NAME='iv_trial_browser', SESSION_COOKIE_SECURE=True,
+                         APP_INSECURE=False, TRUST_CLOUDFLARE=True, SESSION_COOKIE_NAME='iv_trial_browser', SESSION_COOKIE_SECURE=True,
                          SESSION_COOKIE_HTTPONLY=True, SESSION_COOKIE_SAMESITE='Lax',
                          PERMANENT_SESSION_LIFETIME=timedelta(days=14))
 install(server.app, database, daily_starts=None)

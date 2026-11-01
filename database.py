@@ -23,15 +23,28 @@ DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "interviews.d
 
 
 class ManagedConnection(sqlite3.Connection):
+    def execute(self, *args, **kwargs):
+        started=time.perf_counter()
+        try:return super().execute(*args,**kwargs)
+        finally:
+            from flask import has_request_context,g
+            if has_request_context():g.db_ms=g.get('db_ms',0)+(time.perf_counter()-started)*1000
+
     def __exit__(self, exc_type, exc_value, traceback):
+        started=time.perf_counter()
         try:
             return super().__exit__(exc_type, exc_value, traceback)
         finally:
             self.close()
+            from flask import has_request_context,g
+            if has_request_context():g.db_ms=g.get('db_ms',0)+(time.perf_counter()-started)*1000
 
 
 def get_conn():
+    started=time.perf_counter()
     conn = sqlite3.connect(DB_PATH, factory=ManagedConnection)
+    from flask import has_request_context,g
+    if has_request_context():g.db_ms=g.get('db_ms',0)+(time.perf_counter()-started)*1000
     conn.row_factory = sqlite3.Row
     conn.create_function("interview_timestamp", 1, timestamp, deterministic=True)
     conn.execute("PRAGMA foreign_keys = ON")
@@ -117,6 +130,11 @@ def init_db():
         );
         """)
 
+    from account_migration import migrate
+    migrate(__import__(__name__))
+    from deletion_journal import replay
+    replay(__import__(__name__))
+
 
 def _now():
     return datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
@@ -132,6 +150,8 @@ def create_interview(interview_id, job, difficulty, background=None, selection=N
             "VALUES (?, ?, ?, ?, 'active')",
             (interview_id, job, difficulty, _now()),
         )
+        from accounts import bind_record
+        bind_record(conn, interview_id)
         if background:
             from candidate_background import CONSENT_VERSION, RETENTION_SECONDS
             conn.execute('INSERT INTO interview_backgrounds VALUES (?,?,?,?,?)',
@@ -314,9 +334,16 @@ def list_interviews(limit=50):
 
 def delete_interview(interview_id):
     """删除一场面试及其消息、报告（外键 ON DELETE CASCADE 级联）。返回是否删除了行。"""
+    from flask import has_request_context,g
     with get_conn() as conn:
+        if has_request_context() and not g.get('security_bypass') and conn.execute('SELECT 1 FROM interviews WHERE id=?',(interview_id,)).fetchone():
+            from deletion_journal import record
+            record(__import__(__name__),[interview_id])
         cur = conn.execute("DELETE FROM interviews WHERE id = ?", (interview_id,))
-        return cur.rowcount > 0
+        removed=cur.rowcount > 0
+    from speech_temp import cleanup
+    cleanup(__import__(__name__),[interview_id])
+    return removed
 
 
 def interview_exists(interview_id):
@@ -432,3 +459,9 @@ def save_speech_feedback(analysis_id, interview_id, feedback):
     with get_conn() as conn:
         conn.execute('UPDATE speech_analyses SET feedback_json=? WHERE id=? AND interview_id=? AND message_id IS NOT NULL',
                      (json.dumps(feedback, ensure_ascii=False, allow_nan=False), analysis_id, interview_id))
+
+
+def get_profile_snapshot(interview_id):
+    with get_conn() as conn:
+        row=conn.execute('SELECT major,grade,consent,version FROM interview_profile_snapshots WHERE interview_id=?',(interview_id,)).fetchone()
+    return dict(row) if row else {}

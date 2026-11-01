@@ -1,0 +1,98 @@
+[
+  {
+    "target": "local",
+    "sample": 1,
+    "ms": 3.54,
+    "total_ms": 3.8,
+    "status": 200,
+    "server_timing": null
+  },
+  {
+    "target": "local",
+    "sample": 2,
+    "ms": 4.46,
+    "total_ms": 4.7,
+    "status": 200,
+    "server_timing": null
+  },
+  {
+    "target": "local",
+    "sample": 3,
+    "ms": 3.15,
+    "total_ms": 3.36,
+    "status": 200,
+    "server_timing": null
+  },
+  {
+    "target": "local",
+    "sample": 4,
+    "ms": 3.25,
+    "total_ms": 3.47,
+    "status": 200,
+    "server_timing": null
+  },
+  {
+    "target": "local",
+    "sample": 5,
+    "ms": 3.49,
+    "total_ms": 3.71,
+    "status": 200,
+    "server_timing": null
+  },
+  {
+    "target": "local",
+    "sample": 6,
+    "ms": 3.38,
+    "total_ms": 3.61,
+    "status": 200,
+    "server_timing": null
+  },
+  {
+    "target": "public",
+    "sample": 1,
+    "ms": 839.64,
+    "total_ms": 2142.04,
+    "status": 200,
+    "server_timing": null
+  },
+  {
+    "target": "public",
+    "sample": 2,
+    "ms": 845.99,
+    "total_ms": 2049.6,
+    "status": 200,
+    "server_timing": null
+  },
+  {
+    "target": "public",
+    "sample": 3,
+    "ms": 1149.59,
+    "total_ms": 1150.16,
+    "status": 200,
+    "server_timing": null
+  },
+  {
+    "target": "public",
+    "sample": 4,
+    "ms": 841.04,
+    "total_ms": 1103.55,
+    "status": 200,
+    "server_timing": null
+  },
+  {
+    "target": "public",
+    "sample": 5,
+    "ms": 556.41,
+    "total_ms": 840.6,
+    "status": 200,
+    "server_timing": null
+  },
+  {
+    "target": "public",
+    "sample": 6,
+    "ms": 806.2,
+    "total_ms": 1769.26,
+    "status": 200,
+    "server_timing": null
+  }
+]

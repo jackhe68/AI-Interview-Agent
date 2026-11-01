@@ -4,6 +4,7 @@ from pathlib import Path
 from playwright.sync_api import sync_playwright
 sys.path.insert(0, str(Path(__file__).parent))
 import test_speech42 as env
+from browser_fixture_state import stub_browser_state
 from werkzeug.serving import make_server
 
 MOCK = r'''(() => {
@@ -23,6 +24,7 @@ def run():
         with sync_playwright() as p:
             browser = p.chromium.launch(executable_path=r'C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe', headless=True)
             page = browser.new_page()
+            stub_browser_state(page)
             page.add_init_script("localStorage.setItem('iv-session', JSON.stringify({session_id:'test',job:'Java',level:'标准',question:'请介绍自己',progress:{main:1,total:3}}));")
             page.add_init_script(MOCK)
             errors=[]
@@ -52,7 +54,7 @@ def run():
             page.evaluate("Object.defineProperty(window,'speechSynthesis',{value:undefined,configurable:true})")
             # Reload with an additional script to simulate unsupported browsers.
             page.add_init_script("Object.defineProperty(window,'speechSynthesis',{value:undefined,configurable:true})")
-            page.reload()
+            page.reload(wait_until='networkidle')
             assert page.locator('#replayBtn').is_disabled()
             assert page.locator('#submitAnswerBtn').is_enabled()
             assert not errors, errors

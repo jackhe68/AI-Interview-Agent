@@ -1,0 +1,16 @@
+{
+  "old_guest_cookie_preserved": true,
+  "explicit_guest_migration": true,
+  "two_account_isolation": true,
+  "profile_cross_device": true,
+  "real_answer_idempotency": true,
+  "real_report_saved": true,
+  "pdf": true,
+  "saved_reanswer_without_ai": true,
+  "password_revoke_other_device": true,
+  "cookie_flags": true,
+  "csrf": true,
+  "no_store": true,
+  "test_accounts_deleted": true,
+  "test_interview_deleted": true
+}

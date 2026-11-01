@@ -1,6 +1,6 @@
 """Small-group HTTPS trial: separate DB selected by runner, browser-scoped access.
 
-This module is installed only in the external trial process, never the local app.
+HTTPS trial/formal entry-point policy. Account ownership also applies in the local app.
 """
 import hashlib
 import secrets
@@ -13,6 +13,7 @@ from interview_time import normalize_interview
 
 
 def install(app, db, daily_starts=30):
+    app.extensions['public_trial_installed']=True
     with db.get_conn() as conn:
         conn.executescript('''
             CREATE TABLE IF NOT EXISTS trial_owners (
@@ -31,11 +32,8 @@ def install(app, db, daily_starts=30):
         return hashlib.sha256(session['trial_browser'].encode()).hexdigest()
 
     def owns(sid):
-        if not isinstance(sid, str) or not sid:
-            return False
-        with db.get_conn() as conn:
-            return conn.execute('SELECT 1 FROM trial_owners WHERE interview_id=? AND owner_hash=?',
-                                (sid, owner())).fetchone() is not None
+        from accounts import owns as account_owns
+        return account_owns(db,sid)
 
     @app.before_request
     def protect_trial():
@@ -81,13 +79,13 @@ def install(app, db, daily_starts=30):
 
     @app.after_request
     def finish_trial(response):
-        if request.endpoint == 'api_start' and response.status_code == 200:
+        if request.endpoint == 'api_start' and response.status_code == 200 and g.get('security_bypass'):
             data = response.get_json(silent=True) or {}
             sid = data.get('session_id')
             if sid:
                 try:
                     with db.get_conn() as conn:
-                        conn.execute('INSERT INTO trial_owners(interview_id,owner_hash) VALUES (?,?)', (sid, owner()))
+                        conn.execute('INSERT OR IGNORE INTO trial_owners(interview_id,owner_hash) VALUES (?,?)', (sid, owner()))
                 except Exception:
                     error_response = jsonify(error='试用记录关联失败，请重新开始')
                     error_response.status_code = 503
@@ -128,4 +126,4 @@ def install(app, db, daily_starts=30):
             item['can_view_report'] = item['status'] in ('finished', 'ended') and item['answered_count'] > 0
             items.append(item)
         return jsonify(total=len(items), items=items)
-    app.view_functions['api_interviews'] = browser_history
+    app.view_functions['api_interviews'] = app.extensions.get('account_history',browser_history)
