@@ -2,6 +2,11 @@
 $ErrorActionPreference = 'Stop'
 $trialFolder = Join-Path (Split-Path -Parent $PSScriptRoot) '.public-test'
 $statePath = Join-Path $trialFolder 'processes.json'
+$mutex = New-Object System.Threading.Mutex($false, 'Local\AIInterviewPublicTrialStartup')
+$held = $false
+try {
+    try { $held = $mutex.WaitOne(0) } catch [System.Threading.AbandonedMutexException] { $held = $true }
+    if (-not $held) { throw '另一个启动或停止任务正在运行，请等待原窗口完成。' }
 if (-not (Test-Path -LiteralPath $statePath)) { Write-Host 'Public trial is already stopped.'; exit 0 }
 $object = Get-Content -LiteralPath $statePath -Raw | ConvertFrom-Json
 $state = @{}
@@ -32,4 +37,11 @@ if ($KeepTunnel) {
     Write-Host 'Trial application stopped; the public tunnel and URL are preserved.'
 } else {
     Write-Host 'Public trial stopped. Interview data is preserved; local port 5001 is unchanged.'
+}
+} catch {
+    Write-Host $_.Exception.Message
+    exit 1
+} finally {
+    if ($held) { $mutex.ReleaseMutex() }
+    $mutex.Dispose()
 }

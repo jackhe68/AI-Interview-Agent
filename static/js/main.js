@@ -293,10 +293,13 @@
     startBtn.disabled = true;
     startBtn.innerHTML = "正在生成首题…";
 
+    var startController = window.AbortController ? new AbortController() : null;
+    var startTimer = setTimeout(function(){if(startController)startController.abort();},90000);
     fetch("/api/interview/start", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload)
+      body: JSON.stringify(payload),
+      signal: startController ? startController.signal : undefined
     })
       .then(function (res) {
         return res.json().then(function (data) {
@@ -325,16 +328,19 @@
             question_sequence: r.data.question_sequence || 1,
             background_active: !!r.data.background_active
           }));
-        } catch (e) { /* ignore */ }
+        } catch (e) {
+          showError('本场面试已保存，但浏览器未能保存进入信息。请允许本站存储后，从历史记录继续，避免重复开始。');
+          starting=false;syncUI();startBtn.innerHTML=original;return;
+        }
         clearBackground();
         window.location.href = "/interview";
       })
-      .catch(function () {
-        showError("连接暂时中断，请稍后重试；当前选择仍保留");
+      .catch(function (error) {
+        showError(error.name==="AbortError" ? "首题等待超时。请先在历史记录核对是否已有练习，再重试；当前选择仍保留。" : "连接暂时中断。请先在历史记录核对已保存练习，再重试；当前选择仍保留。");
         starting = false;
         syncUI();
         startBtn.innerHTML = original;
-      });
+      }).finally(function(){clearTimeout(startTimer);});
   });
 
   syncUI();

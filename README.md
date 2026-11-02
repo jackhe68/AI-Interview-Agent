@@ -42,6 +42,8 @@ $env:APP_INSECURE = "1"  # 仅本机HTTP调试
 
 ## 文档
 
+- [开始面试与公网启动故障恢复](docs/startup-recovery.md)
+
 - [账户、安全、数据库迁移与运维交付](docs/accounts-and-operations.md)
 
 - [公网试用说明](docs/public-trial-guide.md)
