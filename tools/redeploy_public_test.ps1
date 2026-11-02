@@ -35,7 +35,7 @@ try {
     if ($NoBrowser) { $startArguments += '-NoBrowser' }
     if ($RebuildTunnel) { $startArguments += '-RebuildTunnel' }
     & $shellPath @startArguments
-    if ($LASTEXITCODE -ne 0) { throw '公网入口未通过实时访问检查。请检查网络后再次双击重新部署。' }
+    if ($LASTEXITCODE -ne 0) { throw '公网入口未通过访问检查，请查看上方具体原因。数据已保留；稍后运行“启动公网试用”即可复查，无需反复重新部署。' }
     Write-RedeployStatus '【4/4】重新部署完成！最新网址已更新到桌面，浏览器可直接访问。'
     Write-RedeployStatus '请使用桌面“当前网址”；如果连接已重建，请重新分享新网址。'
     Write-RedeployStatus '现在可以关闭这个窗口。请保持电脑开机、联网且不休眠。'

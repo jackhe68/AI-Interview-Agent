@@ -25,7 +25,7 @@ foreach ($kind in $kinds) {
     if (-not $state.ContainsKey($kind + '_pid')) { continue }
     try {
         $process = Get-Process -Id ([int]$state[$kind + '_pid']) -ErrorAction Stop
-        $expectedStart = [datetime]::Parse($state[$kind + '_started']).ToUniversalTime()
+        $expectedStart = ([datetime]$state[$kind + '_started']).ToUniversalTime()
         if ([math]::Abs(($process.StartTime.ToUniversalTime() - $expectedStart).TotalSeconds) -lt 1) {
             Stop-TrialProcessTree $process.Id $expectedStart
         }

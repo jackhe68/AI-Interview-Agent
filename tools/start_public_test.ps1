@@ -1,4 +1,5 @@
-﻿param([switch]$NoBrowser, [switch]$KeepTunnel, [switch]$ReloadApp, [switch]$RebuildTunnel)
+﻿param([switch]$NoBrowser, [switch]$KeepTunnel, [switch]$ReloadApp, [switch]$RebuildTunnel,
+      [ValidateRange(60,300)][int]$PublicReadyTimeoutSeconds = 180)
 $ErrorActionPreference = 'Stop'
 $projectRoot = Split-Path -Parent $PSScriptRoot
 $trialFolder = Join-Path $projectRoot '.public-test'
@@ -34,6 +35,7 @@ function Save-TrialState {
 }
 function Start-NewTrialTunnel {
     $generation = [guid]::NewGuid().ToString('N')
+    $script:publicProbeFailure = ''
     $state.Remove('public_url')
     $state['tunnel_log'] = Join-Path $trialFolder ('tunnel-' + $generation + '.err.log')
     $state['tunnel_out_log'] = Join-Path $trialFolder ('tunnel-' + $generation + '.out.log')
@@ -44,12 +46,56 @@ function Start-NewTrialTunnel {
     return $process
 }
 function Test-PublicTrialUrl([string]$url) {
+    $script:publicProbeFailure = '公网地址无效'
     if ($url -notmatch '^https://[a-z0-9-]+\.trycloudflare\.com$') { return $false }
+    $timer = [Diagnostics.Stopwatch]::StartNew()
+    $category = 'invalid_response'
+    $passed = $false
     try {
         $probe = $url + '/api/health?launcher_check=' + [guid]::NewGuid().ToString('N')
         $result = Invoke-RestMethod -Uri $probe -Headers @{'Cache-Control'='no-cache'} -TimeoutSec 6 -ErrorAction Stop
-        return $result.ok -eq $true
-    } catch { return $false }
+        $passed = $result.ok -eq $true
+        if ($passed) { $category = 'ok'; $script:publicProbeFailure = '' }
+        else { $script:publicProbeFailure = '公网返回了非预期内容，尚未到达面试服务' }
+    } catch {
+        $category = 'network'
+        $script:publicProbeFailure = '公网连接失败'
+        # Record only fixed descriptions and status codes, never headers or response bodies.
+        $exception = $_.Exception
+        while ($exception) {
+            if ($exception.Response) {
+                $code = [int]$exception.Response.StatusCode
+                $category = 'http_' + $code
+                $script:publicProbeFailure = '公网入口返回 HTTP ' + $code
+                break
+            }
+            if ($exception -is [Net.WebException]) {
+                switch ($exception.Status.ToString()) {
+                    'NameResolutionFailure' { $category = 'dns'; $script:publicProbeFailure = '新网址的域名尚无法解析' }
+                    'ProxyNameResolutionFailure' { $category = 'proxy_dns'; $script:publicProbeFailure = '网络代理的域名无法解析' }
+                    'Timeout' { $category = 'timeout'; $script:publicProbeFailure = '公网访问超时' }
+                    'ConnectFailure' { $category = 'connect'; $script:publicProbeFailure = '无法连接公网入口' }
+                    'TrustFailure' { $category = 'tls'; $script:publicProbeFailure = '公网证书验证失败' }
+                    'SecureChannelFailure' { $category = 'tls'; $script:publicProbeFailure = '公网加密连接失败' }
+                }
+                break
+            }
+            $exception = $exception.InnerException
+        }
+    } finally {
+        # A separate attempt log preserves the evidence missing from older startup failures.
+        @{time=(Get-Date).ToUniversalTime().ToString('o');url=$url;category=$category;
+          elapsed_ms=[math]::Round($timer.Elapsed.TotalMilliseconds)} | ConvertTo-Json -Compress |
+            Add-Content -LiteralPath (Join-Path $trialFolder 'connectivity.jsonl') -Encoding utf8
+    }
+    return $passed
+}
+function Assert-TrialOriginReady {
+    try {
+        $health = Invoke-RestMethod 'http://127.0.0.1:5010/api/health' -TimeoutSec 3 -ErrorAction Stop
+        if ($health.ok) { return }
+    } catch { }
+    throw '本机面试服务未响应；请查看server.err.log，重新连接隧道不能解决此问题。'
 }
 function Publish-TrialUrl([string]$url, [switch]$Verified) {
     if ($url -notmatch '^https://[a-z0-9-]+\.trycloudflare\.com$') { throw 'Invalid public URL.' }
@@ -88,7 +134,7 @@ function Test-TrackedProcess($saved, [string]$kind) {
     if (-not $saved -or -not $saved.ContainsKey($kind + '_pid')) { return $false }
     try {
         $process = Get-Process -Id ([int]$saved[$kind + '_pid']) -ErrorAction Stop
-        $expectedStart = [datetime]::Parse($saved[$kind + '_started']).ToUniversalTime()
+        $expectedStart = ([datetime]$saved[$kind + '_started']).ToUniversalTime()
         return [math]::Abs(($process.StartTime.ToUniversalTime() - $expectedStart).TotalSeconds) -lt 1
     } catch { return $false }
 }
@@ -111,6 +157,7 @@ if (Test-Path -LiteralPath $statePath) {
     $object = Get-Content -LiteralPath $statePath -Raw | ConvertFrom-Json
     $object.PSObject.Properties | ForEach-Object { $state[$_.Name] = $_.Value }
 }
+$reuseServer = $false
 if (-not $ReloadApp -and -not $RebuildTunnel -and (Test-TrackedProcess $state 'server') -and (Test-TrackedProcess $state 'tunnel')) {
     $connectedUrl = Read-ConnectedUrl
     if ($connectedUrl) {
@@ -118,6 +165,7 @@ if (-not $ReloadApp -and -not $RebuildTunnel -and (Test-TrackedProcess $state 's
             $health = Invoke-RestMethod 'http://127.0.0.1:5010/api/health' -TimeoutSec 3
         } catch { $health = $null }
         if ($health -and $health.ok) {
+            $reuseServer = $true
             Write-TrialStatus '后台服务正在运行，正在实际检查公网是否可访问…'
             if (Test-PublicTrialUrl $connectedUrl) {
                 Publish-TrialUrl $connectedUrl -Verified
@@ -130,15 +178,16 @@ if (-not $ReloadApp -and -not $RebuildTunnel -and (Test-TrackedProcess $state 's
 $reuseTunnel = -not $RebuildTunnel -and (Test-TrackedProcess $state 'tunnel')
 foreach ($kind in @('tunnel', 'server')) {
     if ($kind -eq 'tunnel' -and $reuseTunnel) { continue }
+    if ($kind -eq 'server' -and $reuseServer) { continue }
     if (Test-TrackedProcess $state $kind) {
-        Stop-TrialProcessTree ([int]$state[$kind + '_pid']) ([datetime]::Parse($state[$kind + '_started']).ToUniversalTime())
+        Stop-TrialProcessTree ([int]$state[$kind + '_pid']) (([datetime]$state[$kind + '_started']).ToUniversalTime())
     }
 }
 if (-not $reuseTunnel) { $state.Remove('public_url') }
 Save-TrialState
-if (Get-NetTCPConnection -LocalPort 5010 -State Listen -ErrorAction SilentlyContinue) {
+if (-not $reuseServer -and (Get-NetTCPConnection -LocalPort 5010 -State Listen -ErrorAction SilentlyContinue)) {
     if ($reuseTunnel -and (Test-TrackedProcess $state 'tunnel')) {
-        Stop-TrialProcessTree ([int]$state['tunnel_pid']) ([datetime]::Parse($state['tunnel_started']).ToUniversalTime())
+        Stop-TrialProcessTree ([int]$state['tunnel_pid']) (([datetime]$state['tunnel_started']).ToUniversalTime())
         $state.Remove('public_url')
         Save-TrialState
     }
@@ -147,6 +196,10 @@ if (Get-NetTCPConnection -LocalPort 5010 -State Listen -ErrorAction SilentlyCont
 $pythonPath = Join-Path $projectRoot '.venv\Scripts\python.exe'
 $tunnelPath = Join-Path $trialFolder 'cloudflared.exe'
 if (-not (Test-Path -LiteralPath $tunnelPath)) { throw 'cloudflared.exe is missing; restore the verified tunnel download first.' }
+if ($reuseServer) {
+    $serverProcess = Get-Process -Id ([int]$state['server_pid']) -ErrorAction Stop
+    Write-TrialStatus '本机服务正常，保留正在进行的面试，仅恢复公网连接…'
+} else {
 # Keep the previous crash/exit evidence instead of losing it on every redeploy.
 $serverGeneration = [guid]::NewGuid().ToString('N')
 foreach ($logName in @('server.out.log','server.err.log')) {
@@ -160,6 +213,7 @@ Write-TrialStatus '正在启动面试服务…'
 if (-not $reuseTunnel) { $state = @{} }
 $state['server_pid'] = $serverProcess.Id
 $state['server_started'] = $serverProcess.StartTime.ToUniversalTime().ToString('o')
+}
 Save-TrialState
 $originReady = $false
 $originDeadline = (Get-Date).AddSeconds(15)
@@ -173,30 +227,38 @@ do {
 } while ((Get-Date) -lt $originDeadline)
 if (-not $originReady) { throw 'Trial server is not ready; no public tunnel was opened.' }
 if ($reuseTunnel -and -not $state.ContainsKey('public_url') -and -not $state.ContainsKey('tunnel_log')) {
-    Stop-TrialProcessTree ([int]$state['tunnel_pid']) ([datetime]::Parse($state['tunnel_started']).ToUniversalTime())
+    Stop-TrialProcessTree ([int]$state['tunnel_pid']) (([datetime]$state['tunnel_started']).ToUniversalTime())
     $reuseTunnel = $false
 }
 if ($reuseTunnel) {
     Write-TrialStatus '面试服务已更新，保留原公网隧道和网址，正在检查访问…'
     $tunnelProcess = Get-Process -Id ([int]$state['tunnel_pid']) -ErrorAction Stop
 } else {
-    Write-TrialStatus '面试服务已就绪，正在连接公网入口（通常需要几秒到一分钟）…'
+    Write-TrialStatus ('面试服务已就绪，正在连接公网入口；首次检查最多等待' + $PublicReadyTimeoutSeconds + '秒，持续失败会自动换一次连接…')
     $tunnelProcess = Start-NewTrialTunnel
 }
 Save-TrialState
-$deadline = (Get-Date).AddSeconds(60)
+$deadline = (Get-Date).AddSeconds($PublicReadyTimeoutSeconds)
 $nextPublicCheck = Get-Date
 $failedPublicChecks = 0
 $rebuiltAfterFailure = $false
+$warmingUrl = $null
 do {
     Start-Sleep -Seconds 1
     if ($serverProcess.HasExited) { throw '面试服务已退出，请查看server.err.log；数据已保留。' }
     if ($tunnelProcess.HasExited -and -not $rebuiltAfterFailure) {
         Write-TrialStatus '原隧道已退出，正在重新连接公网入口…'
         $tunnelProcess = Start-NewTrialTunnel
-        $rebuiltAfterFailure = $true; $deadline = (Get-Date).AddSeconds(60)
+        $reuseTunnel = $false; $warmingUrl = $null
+        $rebuiltAfterFailure = $true; $deadline = (Get-Date).AddSeconds($PublicReadyTimeoutSeconds)
     } elseif ($tunnelProcess.HasExited) { throw '公网隧道启动失败，请查看本次隧道日志。' }
     $connectedUrl = Read-ConnectedUrl
+    if ($connectedUrl -and -not $reuseTunnel -and $warmingUrl -ne $connectedUrl) {
+        # Registration can precede public DNS/routing readiness. Do not immediately cache a failed lookup.
+        $warmingUrl = $connectedUrl
+        $nextPublicCheck = (Get-Date).AddSeconds(5)
+        Write-TrialStatus '隧道已连接，等待新网址生效后验证；此时请勿重复部署…'
+    }
     if ($connectedUrl -and (Get-Date) -ge $nextPublicCheck) {
         Write-TrialStatus '隧道已连接，正在验证真实公网访问…'
         if (Test-PublicTrialUrl $connectedUrl) {
@@ -204,18 +266,34 @@ do {
             exit 0
         }
         $failedPublicChecks++
+        Write-TrialStatus ($script:publicProbeFailure + '；本机服务仍保留，继续检查…')
         if ($reuseTunnel -and -not $rebuiltAfterFailure -and $failedPublicChecks -ge 3) {
+            Assert-TrialOriginReady
             Write-TrialStatus '原网址连续三次无法访问，正在重建隧道；面试数据和本机服务保留…'
             if (Test-TrackedProcess $state 'tunnel') {
-                Stop-TrialProcessTree ([int]$state['tunnel_pid']) ([datetime]::Parse($state['tunnel_started']).ToUniversalTime())
+                Stop-TrialProcessTree ([int]$state['tunnel_pid']) (([datetime]$state['tunnel_started']).ToUniversalTime())
             }
             $tunnelProcess = Start-NewTrialTunnel
-            $rebuiltAfterFailure = $true; $failedPublicChecks = 0; $deadline = (Get-Date).AddSeconds(60)
+            $reuseTunnel = $false; $warmingUrl = $null
+            $rebuiltAfterFailure = $true; $failedPublicChecks = 0; $deadline = (Get-Date).AddSeconds($PublicReadyTimeoutSeconds)
         }
-        $nextPublicCheck = (Get-Date).AddSeconds(3)
+        $nextPublicCheck = (Get-Date).AddSeconds(5)
+    }
+    if ((Get-Date) -ge $deadline -and -not $rebuiltAfterFailure) {
+        # A newly created tunnel may register successfully but never become publicly usable.
+        Assert-TrialOriginReady
+        Write-TrialStatus '新入口等待后仍无法访问，自动更换一次隧道；本机服务和面试记录保留…'
+        if (Test-TrackedProcess $state 'tunnel') {
+            Stop-TrialProcessTree ([int]$state['tunnel_pid']) (([datetime]$state['tunnel_started']).ToUniversalTime())
+        }
+        $tunnelProcess = Start-NewTrialTunnel
+        $reuseTunnel = $false; $warmingUrl = $null; $failedPublicChecks = 0
+        $rebuiltAfterFailure = $true; $deadline = (Get-Date).AddSeconds($PublicReadyTimeoutSeconds)
     }
 } while ((Get-Date) -lt $deadline)
-throw '公网未能连通。请检查当前网络能否连接 Cloudflare，或换网络后重试。面试数据已保留。'
+Assert-TrialOriginReady
+if (-not $script:publicProbeFailure) { $script:publicProbeFailure = '隧道尚未完成连接' }
+throw ($script:publicProbeFailure + '。已等待并更换过一次连接。本机服务和数据已保留；可稍后运行“启动公网试用”复查，无需反复重新部署。具体检查见connectivity.jsonl和本次隧道日志。')
 } catch {
     Write-TrialStatus '启动未完成，请保留此窗口。面试数据没有删除。'
     Write-TrialStatus ('错误详情：' + $_.Exception.Message)
