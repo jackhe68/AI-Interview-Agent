@@ -25,6 +25,75 @@ class AccountTests(unittest.TestCase):
   with patch.object(env.server,'call_deepseek',return_value='请介绍自己的学习项目'):
    r=send(c,'/api/interview/start',dict(job='Java 后端',level='校招标准',**extra))
   self.assertEqual(r.status_code,200,r.json);return r.json['session_id']
+ def test_password_change_blocks_inflight_old_password_login(self):
+  import accounts,threading
+  from concurrent.futures import ThreadPoolExecutor
+  self.register(self.a);entered=threading.Event();release=threading.Event();original=accounts.check_password_hash
+  def verify(hashed,password):
+   valid=original(hashed,password)
+   if threading.current_thread().name.startswith('stale-login'):
+    entered.set();self.assertTrue(release.wait(8))
+   return valid
+  with patch.object(accounts,'check_password_hash',side_effect=verify):
+   with ThreadPoolExecutor(max_workers=1,thread_name_prefix='stale-login') as pool:
+    future=pool.submit(send,self.b,'/api/account/login',dict(username='student_a',password='correct horse battery'))
+    try:
+     self.assertTrue(entered.wait(5))
+     changed=send(self.a,'/api/account/password',dict(current_password='correct horse battery',password='new password 123',confirm_password='new password 123',revoke_others=True))
+     self.assertEqual(changed.status_code,200)
+    finally:release.set()
+    result=future.result(8)
+  self.assertEqual(result.status_code,401);self.assertEqual(result.json['code'],'credentials_changed')
+  self.assertIsNone(session(self.b)['user']);self.assertIsNotNone(session(self.a)['user'])
+  with env.database.get_conn() as c:self.assertEqual(c.execute('SELECT count(*) FROM auth_sessions').fetchone()[0],1)
+
+ def test_concurrent_password_changes_cannot_overwrite_newer_password(self):
+  import accounts,threading
+  from concurrent.futures import ThreadPoolExecutor
+  self.register(self.a);send(self.b,'/api/account/login',dict(username='student_a',password='correct horse battery'))
+  entered=threading.Event();release=threading.Event();original=accounts.check_password_hash
+  def verify(hashed,password):
+   valid=original(hashed,password)
+   if threading.current_thread().name.startswith('stale-change'):
+    entered.set();self.assertTrue(release.wait(8))
+   return valid
+  def change(client,new):return send(client,'/api/account/password',dict(current_password='correct horse battery',password=new,confirm_password=new,revoke_others=True))
+  with patch.object(accounts,'check_password_hash',side_effect=verify):
+   with ThreadPoolExecutor(max_workers=1,thread_name_prefix='stale-change') as pool:
+    future=pool.submit(change,self.b,'stale new password 123')
+    try:
+     self.assertTrue(entered.wait(5));self.assertEqual(change(self.a,'latest new password 123').status_code,200)
+    finally:release.set()
+    self.assertEqual(future.result(8).status_code,401)
+  with env.database.get_conn() as c:hashed=c.execute('SELECT password_hash FROM users').fetchone()[0]
+  self.assertTrue(original(hashed,'latest new password 123'));self.assertFalse(original(hashed,'stale new password 123'))
+  self.assertIsNone(session(self.b)['user'])
+
+ def test_password_change_can_preserve_other_existing_sessions(self):
+  self.register(self.a);send(self.b,'/api/account/login',dict(username='student_a',password='correct horse battery'))
+  previous=self.a.get_cookie('iv_auth',domain='accounts.test').value
+  result=send(self.a,'/api/account/password',dict(current_password='correct horse battery',password='new password 123',confirm_password='new password 123',revoke_others=False))
+  self.assertEqual(result.status_code,200);self.assertIsNotNone(session(self.b)['user'])
+  self.assertNotEqual(previous,self.a.get_cookie('iv_auth',domain='accounts.test').value)
+
+ def test_head_and_options_never_start_report_work(self):
+  self.register(self.a);sid=self.start(self.a)
+  env.database.add_message(sid,'user','虚构回答','answer',2);env.database.finish_interview(sid)
+  path='/api/report/'+sid
+  with patch.object(env.server,'call_deepseek',side_effect=AssertionError('safe methods must not call AI')),patch.object(env.server,'report_job_payload',side_effect=AssertionError('safe methods must not enqueue')):
+   self.assertEqual(self.a.get(path,base_url=BASE).status_code,403)
+   self.assertEqual(self.a.head(path,base_url=BASE,headers={'Origin':'https://outside.test'}).status_code,409)
+   self.assertEqual(self.a.open(path,method='OPTIONS',base_url=BASE).status_code,200)
+   self.assertEqual(self.b.head(path,base_url=BASE).status_code,404)
+  self.assertIsNone(env.database.get_report(sid))
+  grade=dict(knowledge_score=80,completeness_score=70,expression_score=90,job_relevance_score=60,weaknesses=[],suggestions=[],overall_comment='虚构总结')
+  with patch.object(env.server,'call_deepseek',return_value=json.dumps(grade)) as provider:
+   token=session(self.a)['csrf_token']
+   self.assertEqual(self.a.get(path,base_url=BASE,headers={'X-CSRF-Token':token}).status_code,200)
+   self.assertEqual(provider.call_count,1)
+  with patch.object(env.server,'call_deepseek',side_effect=AssertionError('cached HEAD must not call AI')):
+   result=self.a.head(path,base_url=BASE);self.assertEqual(result.status_code,200);self.assertEqual(result.data,b'')
+
  def test_registration_validation_unique_and_hash(self):
   bad=payload();bad['password']='short';bad['major_id']=[]
   self.assertEqual(send(self.a,'/api/account/register',bad).status_code,400)

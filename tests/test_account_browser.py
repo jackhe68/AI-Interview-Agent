@@ -1,5 +1,5 @@
 """Real browser account/guest flow against isolated DB and provider doubles."""
-import json,sys,threading
+import json,sys,threading,os
 from pathlib import Path
 from playwright.sync_api import sync_playwright
 from werkzeug.serving import make_server
@@ -15,7 +15,8 @@ def provider(messages,**kwargs):
 env.server.call_deepseek=provider
 http=make_server('127.0.0.1',0,app,threaded=True);threading.Thread(target=http.serve_forever,daemon=True).start()
 base='http://127.0.0.1:'+str(http.server_port)
-out=Path(__file__).resolve().parents[3]/'outputs/account-screenshots';out.mkdir(parents=True,exist_ok=True)
+ROOT=Path(__file__).resolve().parents[1]
+out=Path(os.environ.get('TEST_ARTIFACT_DIR',str(ROOT/'.test-artifacts/account-screenshots'))).resolve();out.mkdir(parents=True,exist_ok=True)
 def register(page,name,nick):
  page.goto(base+'/account',wait_until='networkidle');page.locator('#showRegister').click()
  form=page.locator('#registerForm');form.locator('[name=username]').fill(name);form.locator('[name=password]').fill('browser password 123');form.locator('[name=confirm_password]').fill('browser password 123')

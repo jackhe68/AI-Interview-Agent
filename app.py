@@ -892,7 +892,8 @@ def api_end():
 # ------------------------------------------------------------------
 @app.route("/api/report/<session_id>")
 def api_report(session_id):
-    payload, code = report_to_json(session_id, background=True)
+    # HEAD may inspect a saved report, but must never start or recover AI work.
+    payload, code = report_to_json(session_id,allow_generate=False) if request.method=='HEAD' else report_to_json(session_id,background=True)
     return jsonify(payload), code
 
 

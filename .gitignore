@@ -269,3 +269,5 @@ docs/pdf-export-validation/
 *.deletions.jsonl
 
 .speech-temp/
+
+.test-artifacts/

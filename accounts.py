@@ -129,9 +129,15 @@ def install(app,db,server):
             if row:g.current_user=profile_for(db,row['user_id'])
         guest_hash()
 
-    def new_session(uid,response,revoke_all=False):
+    def new_session(uid,response,*,expected_hash,revoke_all=False,new_password_hash=None):
         token=secrets.token_urlsafe(32);now=time.time()
         with db.get_conn() as conn:
+            conn.execute('BEGIN IMMEDIATE')
+            current=conn.execute('SELECT password_hash FROM users WHERE id=?',(uid,)).fetchone()
+            if not current or not hmac.compare_digest(current['password_hash'],expected_hash):
+                return error('登录信息已更新，请使用当前密码重新登录',401,'credentials_changed')
+            if new_password_hash is not None:
+                conn.execute('UPDATE users SET password_hash=? WHERE id=?',(new_password_hash,uid))
             if revoke_all:conn.execute('DELETE FROM auth_sessions WHERE user_id=?',(uid,))
             old=request.cookies.get(COOKIE,'')
             if old:conn.execute('DELETE FROM auth_sessions WHERE token_hash=?',(digest(old),))
@@ -237,7 +243,7 @@ def install(app,db,server):
                 conn.execute('INSERT INTO users VALUES (?,?,?,?)',(uid,username,hashed,db._now()))
                 conn.execute('INSERT INTO user_profiles VALUES (?,?,?,?,?)',(uid,profile['nickname'],profile['major_id'],profile['other_major'],profile['grade']))
         except sqlite3.IntegrityError:return error('该用户名已被使用',409,'username_taken',{'username':'该用户名已被使用，请换一个'})
-        return new_session(uid,jsonify(ok=True,user=profile_for(db,uid)))
+        return new_session(uid,jsonify(ok=True,user=profile_for(db,uid)),expected_hash=hashed)
 
     @app.post('/api/account/login')
     def account_login():
@@ -251,7 +257,7 @@ def install(app,db,server):
         with db.get_conn() as conn:row=conn.execute('SELECT * FROM users WHERE username=?',(username.lower(),)).fetchone()
         valid=check_password_hash(row['password_hash'] if row else dummy,password)
         if not row or not valid:return error('用户名或密码不正确',401,'invalid_credentials')
-        return new_session(row['id'],jsonify(ok=True,user=profile_for(db,row['id'])))
+        return new_session(row['id'],jsonify(ok=True,user=profile_for(db,row['id'])),expected_hash=row['password_hash'])
 
     @app.post('/api/account/logout')
     def account_logout():
@@ -283,11 +289,9 @@ def install(app,db,server):
         if errors:return error('请检查新密码',fields=errors)
         if not isinstance(data.get('revoke_others',True),bool):return error('会话撤销选项格式不正确')
         hashed=generate_password_hash(data['password'],method='scrypt')
-        with db.get_conn() as conn:
-            conn.execute('UPDATE users SET password_hash=? WHERE id=?',(hashed,g.current_user['id']))
-            # Password rotation and revocation happen in the same transaction.
-            if data.get('revoke_others',True):conn.execute('DELETE FROM auth_sessions WHERE user_id=?',(g.current_user['id'],))
-        return new_session(g.current_user['id'],jsonify(ok=True))
+        # Recheck the verified credential, rotate it and issue/revoke sessions atomically.
+        return new_session(g.current_user['id'],jsonify(ok=True),expected_hash=row['password_hash'],
+                           new_password_hash=hashed,revoke_all=data.get('revoke_others',True))
 
     @app.post('/api/account/claim-guests')
     def account_claim():
