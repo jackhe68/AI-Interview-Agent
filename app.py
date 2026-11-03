@@ -415,7 +415,7 @@ def report_job_payload(interview_id, retry=False):
         if REPORT_JOB_SERVICE is None:
             REPORT_JOB_SERVICE = ReportJobs(dbm, app, lambda sid: generate_report(sid))
     guard = app.extensions.get('public_api_guard')
-    subjects = guard.identities() if guard else ()
+    subjects = guard.report_context() if guard else ()
     job = REPORT_JOB_SERVICE.ensure(interview_id, subjects, retry=retry)
     partial = answered_questions(dbm.get_messages(interview_id))
     if job['state'] == 'failed':

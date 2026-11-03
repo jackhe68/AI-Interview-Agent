@@ -28,17 +28,18 @@ server.app.config.update(SECRET_KEY=secret_path.read_text(encoding='ascii').stri
                          SESSION_COOKIE_HTTPONLY=True, SESSION_COOKIE_SAMESITE='Lax',
                          PERMANENT_SESSION_LIFETIME=timedelta(days=14))
 install(server.app, database, daily_starts=None)
-from api_guard import install as install_api_guard, RELAXED_TRIAL_LIMITS
-install_api_guard(server, database, limits=RELAXED_TRIAL_LIMITS, trust_cloudflare=True)
+from api_guard import install as install_api_guard, trial_limits_from_env
+TRIAL_LIMITS, ACCOUNT_LIMITS = trial_limits_from_env()
+install_api_guard(server, database, limits=TRIAL_LIMITS, user_limits=ACCOUNT_LIMITS, trust_cloudflare=True)
 from candidate_background import start_cleanup
 start_cleanup(database)
 
 if __name__ == '__main__':
     from waitress import serve
     # Leave workers available for pages/health while all AI slots are occupied.
-    print(f"AI concurrency limit: {RELAXED_TRIAL_LIMITS['ai_concurrent']}; "
-          f"request threads: {RELAXED_TRIAL_LIMITS['ai_concurrent'] + 4}", flush=True)
+    print(f"AI concurrency limit: {TRIAL_LIMITS['ai_concurrent']}; "
+          f"request threads: {TRIAL_LIMITS['ai_concurrent'] + 4}", flush=True)
     serve(server.app, host='127.0.0.1', port=5010,
-          threads=RELAXED_TRIAL_LIMITS['ai_concurrent'] + 4, channel_timeout=240,
+          threads=TRIAL_LIMITS['ai_concurrent'] + 4, channel_timeout=240,
           max_request_body_size=26 * 1024 * 1024,
           trusted_proxy='127.0.0.1', trusted_proxy_headers={'x-forwarded-proto'})

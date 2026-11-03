@@ -65,7 +65,8 @@ class GuardTests(unittest.TestCase):
         guard.limits['ai_day_global']=1
         self.assertEqual(self.start().status_code,200)
         r=self.start(self.b)
-        self.assertEqual(r.status_code,429);self.assertEqual(r.headers['Retry-After'],'60')
+        self.assertEqual(r.status_code,429)
+        self.assertTrue(1<=int(r.headers['Retry-After'])<=86400)  # Daily quota resets at UTC+9 midnight.
         self.assertEqual(len(CALLS),1)
         fresh=PublicAPIGuard(env.server.app,env.database,limits={'ai_day_global':1})
         with env.server.app.test_request_context(base_url=BASE):
