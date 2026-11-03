@@ -4,11 +4,12 @@ from pathlib import Path
 from unittest.mock import patch
 sys.path.insert(0, str(Path(__file__).parent))
 import test_speech42 as env
+from score_fixture import with_evidence
 
 client = env.server.app.test_client()
 def deepseek(messages, max_tokens=10000):
     if 'knowledge_score' in messages[-1]['content']:
-        return json.dumps({'knowledge_score':80,'completeness_score':70,'expression_score':90,'job_relevance_score':60,'weaknesses':[{'topic':'示例','score':50,'explanation':'测试'}],'suggestions':['建议'],'overall_comment':'测试报告'})
+        return json.dumps(with_evidence({'knowledge_score':80,'completeness_score':70,'expression_score':90,'job_relevance_score':60,'weaknesses':[{'topic':'示例','score':50,'explanation':'测试'}],'suggestions':['建议'],'overall_comment':'测试报告'},messages))
     if len(messages) == 2: return '请介绍自己'
     return json.dumps({'comment':'测试点评','next_question':'请介绍下一项技能'})
 

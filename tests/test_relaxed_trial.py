@@ -11,6 +11,7 @@ from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).parent))
 import test_speech42 as env
+from score_fixture import with_evidence
 from public_test import install as install_trial
 from api_guard import install, RELAXED_TRIAL_LIMITS
 
@@ -23,9 +24,9 @@ guard = install(env.server, env.database, limits=RELAXED_TRIAL_LIMITS)
 
 def provider(messages, max_tokens=10000):
     if 'knowledge_score' in messages[-1]['content']:
-        return json.dumps(dict(knowledge_score=80, completeness_score=70,
+        return json.dumps(with_evidence(dict(knowledge_score=80, completeness_score=70,
                               expression_score=90, job_relevance_score=60,
-                              weaknesses=[], suggestions=['建议'], overall_comment='总评'))
+                              weaknesses=[], suggestions=['建议'], overall_comment='总评'),messages))
     if len(messages) == 2:
         return '请介绍你的项目经历'
     return json.dumps(dict(comment='回答清楚', next_question='请说明项目难点'))

@@ -5,11 +5,12 @@ from playwright.sync_api import sync_playwright
 from werkzeug.serving import make_server
 sys.path.insert(0,str(Path(__file__).parent))
 import test_speech42 as env
+from score_fixture import with_evidence
 app=env.server.app;app.config.update(SECURITY_TEST_BYPASS=False,APP_INSECURE=True,SESSION_COOKIE_SECURE=False,AUTH_RATE_LIMIT=1000)
 prompts=[]
 def provider(messages,**kwargs):
  prompts.append(json.dumps(messages,ensure_ascii=False))
- if 'knowledge_score' in messages[-1]['content']:return json.dumps(dict(knowledge_score=80,completeness_score=70,expression_score=90,job_relevance_score=60,weaknesses=[],suggestions=['补充结果'],overall_comment='本场练习反馈',knowledge_summary='基于已回答内容',answer_reviews=[]))
+ if 'knowledge_score' in messages[-1]['content']:return json.dumps(with_evidence(dict(knowledge_score=80,completeness_score=70,expression_score=90,job_relevance_score=60,weaknesses=[],suggestions=['补充结果'],overall_comment='本场练习反馈',knowledge_summary='基于已回答内容',answer_reviews=[]),messages))
  if len(messages)==2 and '请开始面试' in messages[-1]['content']:return '请介绍你负责的学习项目。'
  return json.dumps(dict(comment='请进一步说明你的职责和结果。',next_question='这个方案的取舍是什么？',next_step='补充具体案例',answer_outline=['职责','结果'],reference_answer='可结合自己的实际项目描述。',checklist=['能否说明个人职责']))
 env.server.call_deepseek=provider

@@ -32,7 +32,7 @@ from ai_limits import MAX_OUTPUT_TOKENS
 from interview_catalog import catalog, selection_for, selection_prompt
 from candidate_background import normalize_background, prompt_context
 from practice_feedback import (REPORT_PRACTICE_INSTRUCTION, normalize_practice,
-                               report_practice, answered_questions, format_feedback)
+                               report_practice, answered_questions, format_feedback, coverage_of, report_scores, SKIP_ANSWER)
 
 load_dotenv()
 dbm.init_db()
@@ -186,6 +186,9 @@ def ask_next(session, mode):
     raw = call_deepseek(messages)
     data = extract_json(raw)
     if data and isinstance(data, dict):
+        if session.get('answer_skipped'):
+            data['comment']='已跳过本题；未提供实际回答，暂不评价该题能力。'
+            data.pop('next_step',None)
         comment = format_feedback(data, mode)
         question = data.get("next_question")
         question = question.strip() if isinstance(question, str) else ''
@@ -308,10 +311,10 @@ def _generate_report(interview_id):
         f"面试记录：\n{transcript}\n\n"
         "请仅输出 JSON（不要输出其他内容），格式如下：\n"
         "{\n"
-        '  "knowledge_score": 0到100的整数,\n'
-        '  "completeness_score": 0到100的整数,\n'
-        '  "expression_score": 0到100的整数,\n'
-        '  "job_relevance_score": 0到100的整数,\n'
+        '  "knowledge_score": 0到100的整数或null（未观察）,\n'
+        '  "completeness_score": 0到100的整数或null（未观察）,\n'
+        '  "expression_score": 0到100的整数或null（未观察）,\n'
+        '  "job_relevance_score": 0到100的整数或null（未观察）,\n'
         '  "knowledge_summary": "一句话总体评价",\n'
         '  "weaknesses": [{"topic":"练习关注项","answer_sequence":2,"evidence":"回答原文连续摘录","explanation":"基于这段证据的具体说明"}],\n'
         '  "suggestions": ["针对性改进建议"],\n'
@@ -337,7 +340,9 @@ def _generate_report(interview_id):
             raise APIError(502, "评分结果解析失败，请稍后重试")
     if not unassessed:
         for key in ('knowledge_score','completeness_score','expression_score','job_relevance_score'):
+            if key not in data:raise APIError(502,'评分字段不完整，已保留作答与点评，请稍后重试生成报告')
             value=data.get(key)
+            if value is None:continue
             if isinstance(value,bool) or not isinstance(value,(int,float)) or not math.isfinite(value) or not 0<=value<=100:
                 raise APIError(502,'评分字段不完整，已保留作答与点评，请稍后重试生成报告')
     k = clamp_score(data.get("knowledge_score", 0))
@@ -369,14 +374,30 @@ def _generate_report(interview_id):
     overall_comment = str(data.get("overall_comment", "")).strip() or "（未生成总结）"
     knowledge_summary = str(data.get("knowledge_summary", "")).strip() or "（未生成总评）"
 
-    confidence_note = ""
-    if answered < MAIN_QUESTION_COUNT:
-        confidence_note = f"本场仅完成 {answered} 次回答，评价可信度有限，建议完成完整面试以获得更准确的反馈。"
-
     try:
         practice_detail=normalize_practice(data,messages)
     except ValueError:
         raise APIError(502,'评分维度与理由对应结果不一致，已保留作答和点评，请稍后重试生成报告') from None
+    missing=[key for key in SCORE_WEIGHTS if key not in practice_detail['radar_dimensions']]
+    for key,field in [('knowledge','knowledge_score'),('completeness','completeness_score'),('expression','expression_score'),('job_relevance','job_relevance_score')]:
+        entry=practice_detail['radar_dimensions'].get(key)
+        if entry and not entry.get('reason'):
+            practice_detail['radar_dimensions'].pop(key);missing.append(key)
+    missing=list(dict.fromkeys(missing))
+    if 'knowledge' in missing:k=0
+    if 'completeness' in missing:c=0
+    if 'expression' in missing:e=0
+    if 'job_relevance' in missing:jr=0
+    overall_unassessed=bool(missing)
+    if overall_unassessed:
+        overall=0
+        knowledge_summary='部分评分依据不足，暂不计算综合分。'
+        overall_comment='本场缺少部分核心维度可核对的回答依据，暂不作整场能力判断。已观察内容见逐题复盘与有依据的维度；未评估不代表缺乏能力。'
+    coverage=coverage_of(messages)
+    confidence_note=''
+    if coverage['main_topics_covered']<MAIN_QUESTION_COUNT or coverage['skipped'] or overall_unassessed:
+        confidence_note=(f"本场有{coverage['effective_answers']}次有效回答、{coverage['skipped']}次跳过，覆盖{coverage['main_topics_covered']}/{MAIN_QUESTION_COUNT}道主问题。"
+                         '覆盖有限或缺少评分依据的维度显示未评估，不代表缺乏能力。')
     report = {
         "interview_id": interview_id,
         "overall_score": overall,
@@ -389,7 +410,8 @@ def _generate_report(interview_id):
         "overall_comment": overall_comment,
         "knowledge_summary": knowledge_summary,
         "confidence_note": confidence_note,
-        "detail": {"unassessed":unassessed, "scoring_version":"practice-v3-consistency", "raw_dim_count": 4, **practice_detail},
+        "detail": {"unassessed":unassessed,"overall_unassessed":overall_unassessed,"unassessed_core":missing,
+                   "coverage":coverage,"scoring_version":"practice-v4-evidence", "raw_dim_count": 4, **practice_detail},
     }
     dbm.save_report(report)
     # Optional voice advice is requested separately after the score is displayed.
@@ -481,15 +503,11 @@ def report_to_json(interview_id, allow_generate=True, background=False):
             "status": iv["status"],
             "answered_count": answered,
             "duration_sec": duration,
+            "coverage": report.get('detail',{}).get('coverage'),
+            "scoring_version": report.get('detail',{}).get('scoring_version','legacy-unversioned'),
         },
-        "scores": {
-            "overall": None if report.get("detail",{}).get("unassessed") else report["overall_score"],
-            "knowledge": None if report.get("detail",{}).get("unassessed") else report["knowledge_score"],
-            "completeness": None if report.get("detail",{}).get("unassessed") else report["completeness_score"],
-            "expression": None if report.get("detail",{}).get("unassessed") else report["expression_score"],
-            "job_relevance": None if report.get("detail",{}).get("unassessed") else report["job_relevance_score"],
-        },
-        "grade": "覆盖不足 · 未评分" if report.get("detail",{}).get("unassessed") else grade_of(report["overall_score"]),
+        "scores": report_scores(report),
+        "grade": "覆盖不足 · 未评分" if report_scores(report)['overall'] is None else grade_of(report["overall_score"]),
         "weaknesses": [dict(item,score=None) for item in report["weaknesses"]],
         "suggestions": report["suggestions"],
         "overall_comment": report["overall_comment"],
@@ -836,7 +854,7 @@ def api_answer():
         sequence = dbm.next_sequence(session_id)
         mode = 'followup' if session['phase']=='main' and session['followup_used']<MAX_FOLLOWUP_PER_Q else (
             'next_main' if session['main_index']+1<MAIN_QUESTION_COUNT else 'finish')
-        comment,next_q = ask_next(session,mode)
+        comment,next_q = ask_next(dict(session,answer_skipped=answer==SKIP_ANSWER),mode)
         planned = dict(session)
         if mode=='followup':
             planned.update(followup_used=session['followup_used']+1,phase='followup')

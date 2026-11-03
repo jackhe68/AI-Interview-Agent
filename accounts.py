@@ -345,7 +345,7 @@ def install(app,db,server):
         for row in rows:
             item=normalize_interview(row);item.pop('owner_user_id',None)
             detail=json.loads(item.pop('report_detail') or '{}');has_report=item.pop('report_id') is not None
-            if detail.get('unassessed'):item['overall_score']=None
+            if detail.get('unassessed') or detail.get('overall_unassessed'):item['overall_score']=None
             item.update(selection=db.get_selection(item['id']),has_report=has_report,can_view_report=item['status'] in ('ended','finished') and item['answered_count']>0)
             items.append(item)
         return jsonify(total=len(items),items=items)

@@ -17,7 +17,8 @@ class ScoreTests(unittest.TestCase):
   self.messages=env.database.get_messages(self.sid)
   self.data=dict(knowledge_score=80,completeness_score=70,expression_score=90,job_relevance_score=60,
    weaknesses=[],suggestions=['虚构改进建议'],overall_comment='虚构契约测试',
-   radar_dimensions=[dict(key='knowledge',score=80,answer_sequence=2,evidence='先验证输入',reason='虚构评分理由')])
+   radar_dimensions=[dict(key=key,score=value,answer_sequence=2,evidence='先验证输入',reason='虚构评分理由')
+                     for key,value in [('knowledge',80),('completeness',70),('expression',90),('job_relevance',60)]])
  def generate(self,data):
   with patch.object(env.server,'call_deepseek',return_value=json.dumps(data,ensure_ascii=False)):
    return env.server.generate_report(self.sid)
@@ -33,7 +34,7 @@ class ScoreTests(unittest.TestCase):
  def test_consistent_report_retains_existing_weighted_total_and_version(self):
   result=self.generate(self.data)
   self.assertEqual(result['overall_score'],77)
-  self.assertEqual(result['detail']['scoring_version'],'practice-v3-consistency')
+  self.assertEqual(result['detail']['scoring_version'],'practice-v4-evidence')
   shown=report_practice(result,self.messages)['radar_dimensions'][0]
   self.assertEqual(shown['score'],80);self.assertEqual(shown['reason'],'虚构评分理由')
  def test_invalid_core_scores_cannot_be_saved(self):

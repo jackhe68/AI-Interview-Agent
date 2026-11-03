@@ -77,7 +77,10 @@ class PracticeValueTests(unittest.TestCase):
 
     def test_legacy_reports_keep_their_scores_without_fabricated_new_dimensions(self):
         grade = {key: value for key, value in GRADE.items() if key not in ('radar_dimensions', 'answer_reviews')}
-        result = self.report(grade)
+        # Read a genuinely saved old-format report, rather than generating a new ungrounded score.
+        env.database.save_report(dict(grade,interview_id='practice-test',overall_score=77,confidence_note='',detail={}))
+        with patch.object(env.server,'call_deepseek',side_effect=AssertionError('History must not be rescored')):
+            result=self.client.get('/api/report/practice-test').json
         self.assertEqual(result['scores']['overall'], 77)
         self.assertEqual([d['score'] for d in result['radar_dimensions'][4:]], [None]*4)
         self.assertNotIn('reference_answer', result['answer_reviews'][0])

@@ -10,9 +10,10 @@ from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).parent))
 import test_speech42 as env
+from score_fixture import with_evidence
 
-GRADE = json.dumps(dict(knowledge_score=80, completeness_score=70, expression_score=90,
-                       job_relevance_score=60, weaknesses=[], suggestions=['结合案例'], overall_comment='测试评价'))
+GRADE = json.dumps(with_evidence(dict(knowledge_score=80, completeness_score=70, expression_score=90,
+                       job_relevance_score=60, weaknesses=[], suggestions=['结合案例'], overall_comment='测试评价'),answer='我负责Java接口开发'))
 
 
 class ReportRecoveryTests(unittest.TestCase):

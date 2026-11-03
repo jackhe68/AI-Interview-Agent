@@ -6,6 +6,7 @@ from pathlib import Path
 from flask import session
 sys.path.insert(0,str(Path(__file__).parent))
 import test_speech42 as env
+from score_fixture import with_evidence
 from public_test import install as trial_install
 from api_guard import install, DEFAULTS, POLICY, PublicAPIGuard
 
@@ -15,7 +16,7 @@ FAIL=[False]
 def provider(messages,max_tokens=10000):
     CALLS.append((messages,max_tokens))
     if FAIL[0]:raise env.server.APIError(502,'测试上游失败')
-    if 'knowledge_score' in messages[-1]['content']:return json.dumps({'knowledge_score':80,'completeness_score':70,'expression_score':90,'job_relevance_score':60,'weaknesses':[],'suggestions':['建议'],'overall_comment':'总评'})
+    if 'knowledge_score' in messages[-1]['content']:return json.dumps(with_evidence({'knowledge_score':80,'completeness_score':70,'expression_score':90,'job_relevance_score':60,'weaknesses':[],'suggestions':['建议'],'overall_comment':'总评'},messages))
     if len(messages)==2:return '请介绍你掌握的Java技能'
     return json.dumps({'comment':'回答偏题，请围绕岗位作答','next_question':'请介绍你做过的Java项目'})
 

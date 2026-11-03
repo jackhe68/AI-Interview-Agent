@@ -9,6 +9,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 import test_speech42 as env
+from score_fixture import with_evidence
 from public_test import install as install_trial
 from api_guard import install, RELAXED_TRIAL_LIMITS
 from candidate_background import CONSENT_VERSION
@@ -26,8 +27,8 @@ guard = install(env.server, env.database, limits=RELAXED_TRIAL_LIMITS)
 def provider(messages, max_tokens=10000):
     CALLS.append(messages)
     if 'knowledge_score' in messages[-1]['content']:
-        return json.dumps(dict(knowledge_score=80, completeness_score=70, expression_score=90,
-                              job_relevance_score=60, weaknesses=[], suggestions=['结合案例'], overall_comment='测试评价'))
+        return json.dumps(with_evidence(dict(knowledge_score=80, completeness_score=70, expression_score=90,
+                              job_relevance_score=60, weaknesses=[], suggestions=['结合案例'], overall_comment='测试评价'),messages))
     if len(messages) == 2:
         return '请结合项目经历介绍自己'
     return json.dumps(dict(comment='表述清楚', next_question='请说明Redis缓存与数据库的一致性方案'))

@@ -9,6 +9,7 @@ from unittest.mock import patch
 sys.path.insert(0,str(Path(__file__).parent))
 import test_speech42 as env
 from test_practice_value import GRADE
+from score_fixture import with_evidence
 from public_test import install as install_trial
 from api_guard import install, RELAXED_TRIAL_LIMITS
 
@@ -25,7 +26,7 @@ class DraftRecoveryTests(unittest.TestCase):
         def provider(messages,max_tokens=10000):
             self.ai_calls+=1
             if 'knowledge_score' in messages[-1]['content']:
-                self.grade_calls+=1;return json.dumps(GRADE)
+                self.grade_calls+=1;return json.dumps(with_evidence(GRADE,messages))
             if len(messages)==2:return '请介绍你解决问题的思路。'
             return json.dumps(dict(comment='本题建议：补充验证方式。',next_question='请进一步说明如何验证效果。',
                                    answer_outline=['说明目标','解释验证步骤'],reference_answer='先设定目标，再比较前后结果。'))

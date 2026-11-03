@@ -134,7 +134,8 @@
     if(iv.practice_profile && iv.practice_profile.consent) html += '<span class="badge">本场背景：'+esc(iv.practice_profile.major)+' · '+esc(iv.practice_profile.grade)+'</span>';
     html += '<span class="badge">' + fmtDate(iv.started_at) + '</span>';
     if (iv.duration_sec != null) html += '<span class="badge">时长：' + fmtDuration(iv.duration_sec) + '</span>';
-    html += '<span class="badge">答题：' + iv.answered_count + ' 次</span>';
+    html += iv.coverage ? '<span class="badge">有效作答：'+esc(iv.coverage.effective_answers)+' 次 · 跳过：'+esc(iv.coverage.skipped)+' 次</span>'
+      : '<span class="badge">答题：' + iv.answered_count + ' 次</span>';
     html += '<span class="badge">状态：' + (iv.status === "ended" ? "提前结束" : "已完成") + '</span>';
     meta.innerHTML = html;
   }
@@ -175,11 +176,11 @@
   }
 
   /* ---------- 渲染：薄弱知识点 ---------- */
-  function renderWeaknesses(weaknesses) {
+  function renderWeaknesses(weaknesses,unassessed) {
     var list = el("weakList");
     var tags = el("weakTags");
     if (!weaknesses || !weaknesses.length) {
-      list.innerHTML = '<div class="pace-empty"><div class="icon">✅</div>未识别到明显薄弱点（或回答较少，AI 未给出具体项）。</div>';
+      list.innerHTML = '<div class="pace-empty">'+(unassessed ? '本场依据不足，暂不能判断薄弱项；可补充回答后继续练习。' : '本场已回答内容中暂无可核对的薄弱项，不代表未考察能力都已掌握。')+'</div>';
       tags.innerHTML = "";
       return;
     }
@@ -444,7 +445,7 @@
     renderRadarValues(dimensions);
     renderReviews(data.answer_reviews);
     renderComment(data);
-    renderWeaknesses(data.weaknesses);
+    renderWeaknesses(data.weaknesses,typeof data.scores.overall!=='number');
     renderSuggestions(data.suggestions);
     renderSpeech(data.speech_analyses);
     el('partialReport').classList.add('is-hidden');
