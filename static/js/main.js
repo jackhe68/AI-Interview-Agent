@@ -295,11 +295,16 @@
 
     var startController = window.AbortController ? new AbortController() : null;
     var startTimer = setTimeout(function(){if(startController)startController.abort();},90000);
-    fetch("/api/interview/start", {
+    var resetStart=document.getElementById('startResetBtn');
+    if(resetStart)resetStart.hidden=true;
+    InterviewStarts.prepare(payload).then(function(prepared){
+     payload=prepared;
+     return fetch("/api/interview/start", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
       signal: startController ? startController.signal : undefined
+     });
     })
       .then(function (res) {
         return res.json().then(function (data) {
@@ -308,6 +313,12 @@
       })
       .then(function (r) {
         if (!r.ok) {
+          var code=r.data && r.data.code;
+          if(code==='start_uncertain' || code==='start_conflict'){
+            if(!resetStart){resetStart=document.createElement('button');resetStart.type='button';resetStart.id='startResetBtn';resetStart.className='btn btn--ghost';startBtn.parentNode.appendChild(resetStart);}
+            resetStart.textContent='我已核对历史，允许新建一场';resetStart.hidden=false;
+            resetStart.onclick=function(){InterviewStarts.finish(payload.request_id);resetStart.hidden=true;showToast('已准备新请求，请再次点击开始面试。');};
+          } else if(code!=='start_in_progress')InterviewStarts.finish(payload.request_id);
           showError(r.data && r.data.error ? r.data.error : "面试启动失败（" + r.status + "），请稍后重试");
           starting = false;
           syncUI();
@@ -332,11 +343,12 @@
           showError('本场面试已保存，但浏览器未能保存进入信息。请允许本站存储后，从历史记录继续，避免重复开始。');
           starting=false;syncUI();startBtn.innerHTML=original;return;
         }
+        InterviewStarts.finish(payload.request_id);
         clearBackground();
         window.location.href = "/interview";
       })
       .catch(function (error) {
-        showError(error.name==="AbortError" ? "首题等待超时。请先在历史记录核对是否已有练习，再重试；当前选择仍保留。" : "连接暂时中断。请先在历史记录核对已保存练习，再重试；当前选择仍保留。");
+        showError(error.startPreparation ? error.message : error.name==="AbortError" ? "首题等待超时。请先在历史记录核对是否已有练习，再重试；当前选择仍保留。" : "连接暂时中断。请先在历史记录核对已保存练习，再重试；当前选择仍保留。");
         starting = false;
         syncUI();
         startBtn.innerHTML = original;

@@ -3,7 +3,7 @@
  var originalFetch=window.fetch.bind(window),state=null,scope=null;
  var Account=window.Account={csrf:'',scope:null,state:null};
  function clearPrivate() {
-  try { Object.keys(localStorage).filter(function(k){return /^iv-(session|config|answer-draft)/.test(k);}).forEach(function(k){localStorage.removeItem(k);}); } catch(e){}
+  try { Object.keys(localStorage).filter(function(k){return /^iv-(session|config|answer-draft|start-request)/.test(k);}).forEach(function(k){localStorage.removeItem(k);}); } catch(e){}
  }
  function accept(data) {
   state=Account.state=data;Account.csrf=data.csrf_token;Account.scope=data.scope;

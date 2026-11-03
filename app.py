@@ -686,6 +686,7 @@ def api_start():
     try:
         selection = selection_for(data.get('major_id'), job)
         background = normalize_background(data.get('background'), data.get('background_consent'))
+        requested_background=dict(background)
         if not isinstance(data.get('profile_consent',False),bool):raise ValueError('资料使用选项格式不正确')
         user=g.get('current_user')
         if data.get('profile_consent'):
@@ -694,26 +695,42 @@ def api_start():
     except ValueError as exc:
         return jsonify(error=str(exc)), 400
 
+    from start_requests import reserve,complete,failed,StartRequestError
+    try:
+        reservation,cached=reserve(dbm,data.get('request_id'),dict(job=job,level=level,major_id=data.get('major_id'),
+            background=requested_background,profile_consent=data.get('profile_consent',False)))
+    except StartRequestError as exc:
+        return jsonify(error=exc.message,code=exc.code),exc.status
+    if cached:return jsonify(cached[0]),cached[1]
     try:
         first_q = call_deepseek([
             {"role": "system", "content": interviewer_system_prompt(job, level, background, selection)},
             {"role": "user", "content": "请开始面试，先让候选人做个自我介绍。只输出这一个开场问题。"},
         ])
     except APIError as e:
-        return jsonify({"error": e.message}), e.code
+        failed(dbm,reservation,e.code,e.message)
+        return jsonify(error=e.message,code='start_failed'), e.code
+    except Exception:
+        message='首题结果暂未确认，请先核对历史，不要重复新建'
+        failed(dbm,reservation,500,message,uncertain=True)
+        return jsonify(error=message,code='start_uncertain'),500
 
     session_id = uuid.uuid4().hex
+    progress=dict(main=1,total=MAIN_QUESTION_COUNT,type='main')
+    response=dict(session_id=session_id,selection=selection,question_sequence=1,answered_count=0,
+                  job=job,level=level,question=first_q,progress=progress,finished=False,background_active=bool(background))
     try:
-        dbm.create_interview(session_id, job, level, background=background, selection=selection)
-        dbm.add_message(session_id, "assistant", first_q, "main_question", 1)
-        if user:
-            with dbm.get_conn() as conn:conn.execute('INSERT INTO interview_profile_snapshots VALUES (?,?,?,?,?)',(session_id,user['major'],user['grade_label'],int(data.get('profile_consent',False)),'profile-consent-v1'))
+        with dbm.get_conn() as conn:
+            conn.execute('BEGIN IMMEDIATE')
+            dbm.create_interview(session_id, job, level, background=background, selection=selection,connection=conn)
+            dbm.add_message(session_id, "assistant", first_q, "main_question", 1,connection=conn)
+            if user:
+                conn.execute('INSERT INTO interview_profile_snapshots VALUES (?,?,?,?,?)',(session_id,user['major'],user['grade_label'],int(data.get('profile_consent',False)),'profile-consent-v1'))
+            complete(conn,reservation,session_id,response)
     except Exception:
-        try:
-            dbm.delete_interview(session_id)
-        except Exception:
-            pass
-        return jsonify({"error": "面试记录保存失败，请重试"}), 500
+        message='面试保存结果暂未确认，请先核对历史，再决定是否新建一场'
+        failed(dbm,reservation,500,message,uncertain=True)
+        return jsonify(error=message,code='start_uncertain'),500
 
     session = {
         "id": session_id,
@@ -729,18 +746,7 @@ def api_start():
         "busy": False,
     }
     SESSIONS[session_id] = session
-    return jsonify({
-        "session_id": session_id,
-        "selection": selection,
-        "question_sequence": 1,
-        "answered_count": 0,
-        "job": job,
-        "level": level,
-        "question": first_q,
-        "progress": progress_of(session),
-        "finished": False,
-        "background_active": bool(background),
-    })
+    return jsonify(response)
 
 
 # ------------------------------------------------------------------

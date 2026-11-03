@@ -301,6 +301,7 @@ def install(app,db,server):
         with db.get_conn() as conn:
             conn.execute('BEGIN IMMEDIATE')
             result=conn.execute('UPDATE interviews SET owner_user_id=? WHERE owner_user_id IS NULL AND id IN (SELECT interview_id FROM trial_owners WHERE owner_hash=?)',(g.current_user['id'],guest_hash()))
+            conn.execute('UPDATE start_requests SET owner_user_id=? WHERE interview_id IN (SELECT id FROM interviews WHERE owner_user_id=?)',(g.current_user['id'],g.current_user['id']))
         return jsonify(ok=True,migrated=result.rowcount)
 
     @app.delete('/api/account')

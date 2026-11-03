@@ -13,7 +13,7 @@ with tempfile.TemporaryDirectory() as directory:
  database.init_db();database.init_db()
  with database.get_conn() as conn:
   row=tuple(conn.execute('SELECT * FROM interviews').fetchone());assert row[:-1]==original and row[-1] is None
-  assert conn.execute('SELECT count(*) FROM schema_migrations').fetchone()[0]==1
+  assert {r[0] for r in conn.execute('SELECT version FROM schema_migrations')}=={'accounts-v1','start-requests-v1'}
   assert conn.execute('PRAGMA foreign_key_check').fetchall()==[]
  backup=Path(directory)/'backup.db'
  subprocess.run([sys.executable,str(ROOT/'tools/account_store.py'),'backup','--database',str(path),'--target',str(backup)],check=True,capture_output=True)

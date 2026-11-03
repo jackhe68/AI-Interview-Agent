@@ -149,7 +149,7 @@ class PublicAPIGuard:
                     selection_for(data.get('major_id'), data['job'])
                 except ValueError as exc:
                     return jsonify(error=str(exc)),400
-            allowed = {'api_start':{'job','level','major_id','background','background_consent','profile_consent'},'api_answer':{'session_id','answer','analysis_id','request_id','question_sequence'},'api_end':{'session_id'}}[request.endpoint]
+            allowed = {'api_start':{'job','level','major_id','background','background_consent','profile_consent','request_id'},'api_answer':{'session_id','answer','analysis_id','request_id','question_sequence'},'api_end':{'session_id'}}[request.endpoint]
             if set(data)-allowed:
                 return jsonify(error='请求包含不支持的参数，请从面试页面操作'),400
             if request.endpoint == 'api_answer':

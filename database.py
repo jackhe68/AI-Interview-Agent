@@ -16,6 +16,7 @@ import json
 import os
 import sqlite3
 import time
+from contextlib import nullcontext
 from datetime import datetime, timezone
 from interview_time import normalize_interview, timestamp
 
@@ -143,8 +144,8 @@ def _now():
 # ------------------------------------------------------------------
 # interviews
 # ------------------------------------------------------------------
-def create_interview(interview_id, job, difficulty, background=None, selection=None):
-    with get_conn() as conn:
+def create_interview(interview_id, job, difficulty, background=None, selection=None, connection=None):
+    with (get_conn() if connection is None else nullcontext(connection)) as conn:
         conn.execute(
             "INSERT OR IGNORE INTO interviews(id, job, difficulty, started_at, status) "
             "VALUES (?, ?, ?, ?, 'active')",
@@ -224,9 +225,9 @@ def clear_background(interview_id):
 # ------------------------------------------------------------------
 # messages
 # ------------------------------------------------------------------
-def add_message(interview_id, role, content, message_type, sequence):
+def add_message(interview_id, role, content, message_type, sequence, connection=None):
     """幂等：UNIQUE(interview_id, sequence) 防重复插入同一条消息。"""
-    with get_conn() as conn:
+    with (get_conn() if connection is None else nullcontext(connection)) as conn:
         conn.execute(
             "INSERT OR IGNORE INTO messages(interview_id, role, content, message_type, created_at, sequence) "
             "VALUES (?, ?, ?, ?, ?, ?)",
