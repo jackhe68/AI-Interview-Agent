@@ -23,7 +23,9 @@ RELEASE_FILES = (
     'deploy/wsgi.py', 'deploy/requirements.txt', 'deploy/bootstrap.sh',
     'deploy/nginx.conf', 'deploy/aiinterview.service', 'deploy/README.md',
     'deploy/package_release.py', 'tools/account_store.py',
-    'docs/accounts-and-operations.md', 'README.md', '.env.example',
+    'docs/accounts-and-operations.md', 'docs/start-request-recovery.md',
+    'docs/scoring-evidence.md', 'docs/ai-service-errors.md', 'docs/stepwise-optimization.md',
+    'README.md', '.env.example',
 )
 
 

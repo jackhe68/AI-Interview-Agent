@@ -4,6 +4,7 @@ import hmac
 import ipaddress
 import math
 import os
+import random
 import secrets
 import threading
 import time
@@ -170,18 +171,26 @@ class PublicAPIGuard:
             if not self.slots.acquire(blocking=False):
                 raise error_class(429,'AI正在处理其他回答，请稍后再试；当前文字已保留')
             try:
-                try:
-                    self.consume('ai')  # Reserve BEFORE provider dispatch; failed calls also count.
-                except LimitExceeded as exc:
-                    g.api_limit_message = str(exc)
-                    g.quota_retry_after = exc.retry_after
-                    raise error_class(429,str(exc)) from None
                 protected = [dict(m) for m in messages]
                 if protected and protected[0].get('role')=='system':
                     protected[0]['content'] = POLICY+'\n'+protected[0]['content']
                 else:
                     protected.insert(0,{'role':'system','content':POLICY})
-                return provider(protected,max_tokens=max_tokens)
+                for attempt in range(2):
+                    try:
+                        self.consume('ai')  # Every SDK dispatch, including the one permitted retry, reserves budget.
+                    except LimitExceeded as exc:
+                        g.api_limit_message = str(exc)
+                        g.quota_retry_after = exc.retry_after
+                        raise error_class(429,str(exc)) from None
+                    try:
+                        return provider(protected,max_tokens=max_tokens)
+                    except error_class as exc:
+                        retry=getattr(exc,'retry_after',None)
+                        if attempt==0 and getattr(exc,'retryable',False) and isinstance(retry,(int,float)) and 0<retry<=2:
+                            time.sleep(max(retry,0.5*2**attempt)+random.uniform(0,0.25))
+                            continue
+                        raise
             finally:
                 self.slots.release()
         return guarded
@@ -200,7 +209,7 @@ def install(server, db, limits=None, trust_cloudflare=False, user_limits=None):
             response=jsonify(data)
             response.status_code=429
         if response.status_code==429:
-            response.headers['Retry-After']=str(g.get('quota_retry_after',60))
+            response.headers['Retry-After']=str(g.get('quota_retry_after',g.get('provider_retry_after',60)))
         return response
     server.call_deepseek = guard.wrap(server.call_deepseek,server.APIError)
     # Each reservation corresponds to one SDK attempt, not hidden automatic retries.

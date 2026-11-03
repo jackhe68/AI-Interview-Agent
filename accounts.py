@@ -189,7 +189,7 @@ def install(app,db,server):
             if isinstance(data,dict):
                 data.setdefault('code','request_failed');data.setdefault('request_id',g.get('request_id',''))
                 response.set_data(app.json.dumps(data));response.mimetype='application/json'
-            if response.status_code==429:response.headers.setdefault('Retry-After','900')
+            if response.status_code==429:response.headers.setdefault('Retry-After',str(g.get('provider_retry_after',900)))
         return response
 
     @app.errorhandler(404)

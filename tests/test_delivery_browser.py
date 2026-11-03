@@ -5,11 +5,12 @@ from playwright.sync_api import sync_playwright
 from werkzeug.serving import make_server
 sys.path.insert(0,str(Path(__file__).parent))
 import test_speech42 as env
+from score_fixture import with_evidence
 env.server.app.config['REPORT_JOBS_INLINE']=False
 release=threading.Event();calls=[]
 def provider(*a,**k):
  calls.append(1);release.wait(40)
- return json.dumps(dict(knowledge_score=80,completeness_score=70,expression_score=90,job_relevance_score=60,weaknesses=[],suggestions=['结合案例'],overall_comment='请围绕实际职责与结果作答。',knowledge_summary='这是一段正常正文样式的总评摘要，用于验证长文字的阅读体验。'))
+ return json.dumps(with_evidence(dict(knowledge_score=80,completeness_score=70,expression_score=90,job_relevance_score=60,weaknesses=[],suggestions=['结合案例'],overall_comment='请围绕实际职责与结果作答。',knowledge_summary='这是一段正常正文样式的总评摘要，用于验证长文字的阅读体验。'),messages=a[0]))
 env.server.call_deepseek=provider
 db=env.database;db.create_interview('delivery','Java 后端','校招标准')
 for n in range(2):

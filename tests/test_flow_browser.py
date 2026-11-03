@@ -7,6 +7,7 @@ from playwright.sync_api import sync_playwright
 from werkzeug.serving import make_server
 sys.path.insert(0,str(Path(__file__).parent))
 import test_speech42 as env
+from score_fixture import with_evidence
 
 env.server.app.config['REPORT_JOBS_INLINE']=False
 release=threading.Event();calls=[];failed_once=False
@@ -17,7 +18,7 @@ def provider(*args,**kwargs):
     if 'retry-case' in messages_text(args) and not failed_once:
         failed_once=True
         raise env.server.APIError(504,'AI 响应超时，请稍后重试')
-    return json.dumps(dict(knowledge_score=80,completeness_score=70,expression_score=90,job_relevance_score=60,weaknesses=[],suggestions=['结合案例'],overall_comment='浏览器隔离测试'))
+    return json.dumps(with_evidence(dict(knowledge_score=80,completeness_score=70,expression_score=90,job_relevance_score=60,weaknesses=[],suggestions=['结合案例'],overall_comment='浏览器隔离测试'),messages=args[0]))
 env.server.call_deepseek=provider
 db=env.database
 for sid in ['unfinished','finished','retry']:

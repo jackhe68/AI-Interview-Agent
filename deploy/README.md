@@ -83,7 +83,7 @@ journalctl -u aiinterview -f           # 实时日志
 | 看状态 | `systemctl status aiinterview` |
 | 重启 | `sudo systemctl restart aiinterview` |
 | 更新代码 | 本机 `upload.ps1` 后 `sudo systemctl restart aiinterview` |
-| 备份数据库 | `sqlite3 interviews.db ".backup '/var/backups/iv-$(date +%F).db'"` |
+| 备份数据库及删除台账 | `.venv/bin/python tools/account_store.py backup --database interviews.db --target /var/backups/iv-before-update.db`（目标须为新文件；签名密钥另行妥善保存） |
 | 看磁盘 | `df -h`、`du -sh /var/log/nginx/*` |
 
 ## 注意

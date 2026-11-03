@@ -82,6 +82,7 @@ class ReportJobs:
                     from flask import g
                     with self.app.test_request_context('/internal/report-job'):
                         g.report_subjects = json.loads(job['subjects'])
+                        g.report_task_id=hashlib.sha256(sid.encode()).hexdigest()[:16]
                         try:self.generate(sid)
                         finally:provider_ms=g.get('ai_ms',0);db_ms=g.get('db_ms',0)
                 except Exception as exc:

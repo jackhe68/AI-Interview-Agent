@@ -26,8 +26,8 @@ from io import BytesIO
 import database as dbm
 from interview_time import timestamp
 from dotenv import load_dotenv
-from flask import Flask, jsonify, render_template, request, send_file, g
-from openai import OpenAI
+from flask import Flask, jsonify, render_template, request, send_file, g, has_request_context
+from openai import OpenAI, APIConnectionError, APITimeoutError, APIStatusError
 from ai_limits import MAX_OUTPUT_TOKENS
 from interview_catalog import catalog, selection_for, selection_prompt
 from candidate_background import normalize_background, prompt_context
@@ -65,7 +65,7 @@ REPORT_DISCLAIMER = "本报告由 AI 基于练习回答生成，仅用于求职�
 
 client = None
 if API_KEY:
-    client = OpenAI(api_key=API_KEY, base_url=BASE_URL, timeout=REQUEST_TIMEOUT)
+    client = OpenAI(api_key=API_KEY, base_url=BASE_URL, timeout=REQUEST_TIMEOUT,max_retries=0)
 
 app = Flask(__name__, template_folder=".", static_folder="static")
 app.config["TEMPLATES_AUTO_RELOAD"] = True
@@ -87,10 +87,12 @@ REPORT_JOB_SERVICE = None
 
 class APIError(Exception):
     """业务异常：code 为 HTTP 状态码，message 为可直接展示给用户的友好提示"""
-    def __init__(self, code, message):
+    def __init__(self, code, message, retry_after=None, retryable=False):
         super().__init__(message)
         self.code = code
         self.message = message
+        self.retry_after = retry_after
+        self.retryable = retryable
 
 
 def interviewer_system_prompt(job, level, background=None, selection=None):
@@ -102,45 +104,72 @@ def interviewer_system_prompt(job, level, background=None, selection=None):
 
 
 def call_deepseek(messages, max_tokens=MAX_OUTPUT_TOKENS):
+    def fail(code,message,kind,retry_after=None,retryable=False):
+        context=has_request_context()
+        if context and retry_after is not None:g.provider_retry_after=retry_after
+        app.logger.warning(json.dumps(dict(event='ai_failure',kind=kind,status=code,
+            request_id=g.get('request_id') if context else None,task_id=g.get('report_task_id') if context else None)))
+        raise APIError(code,message,retry_after=retry_after,retryable=retryable) from None
     if client is None:
-        raise APIError(503, "AI 服务未配置：服务器缺少 API 密钥，请联系管理员检查 .env 配置")
+        fail(503,'AI服务尚未就绪，请联系维护人员；已有练习记录仍保留','not_configured')
     ai_started=time.perf_counter()
     try:
         resp = client.chat.completions.create(
             model=MODEL, messages=messages, max_tokens=max_tokens,
         )
-    except Exception as e:
-        msg = str(e)
-        low = msg.lower()
-        if "timed out" in low or "timeout" in low:
-            raise APIError(504, "AI 响应超时，请稍后重试")
-        if "api key" in low or "auth" in low:
-            raise APIError(502, "AI 服务鉴权失败，请检查服务器密钥配置")
-        raise APIError(502, "AI 服务暂时不可用，请稍后重试")
+        choices=getattr(resp,'choices',None)
+        if not isinstance(choices,(list,tuple)) or not choices:fail(502,'AI返回结果不完整，请稍后手动重试','invalid_response')
+        choice=choices[0]
+        finish=getattr(choice,'finish_reason',None)
+        if finish=='length':fail(502,'AI回复达到长度上限，内容未完整生成，请重试','truncated')
+        if finish!='stop':fail(502,'AI未返回完整的文字结果，请稍后手动重试','invalid_response')
+        content=getattr(getattr(choice,'message',None),'content',None)
+        if not isinstance(content,str):fail(502,'AI返回结果格式不正确，请稍后手动重试','invalid_response')
+        if not content.strip():fail(502,'AI返回内容为空，请重试','empty_response')
+        try:content.encode('utf-8')
+        except UnicodeError:fail(502,'AI返回文字编码不完整，请稍后重试','invalid_response')
+        if any(ord(char)<32 and char not in '\n\r\t' for char in content):fail(502,'AI返回文字格式不正确，请稍后重试','invalid_response')
+        return content.strip()
+    except APITimeoutError:
+        fail(504,'AI响应超时，请核对已保存结果后手动重试','timeout')
+    except APIConnectionError:
+        fail(502,'AI连接暂时中断，请核对已保存结果后手动重试','connection')
+    except APIStatusError as exc:
+        status=exc.status_code
+        if status in (401,403):fail(502,'AI服务暂时无法验证访问权限，请联系维护人员','authentication')
+        if status==402:fail(503,'AI服务额度暂时不足，请联系维护人员；已有记录仍保留','provider_budget')
+        if status==429:
+            header=(getattr(exc.response,'headers',{}) or {}).get('retry-after','')
+            retry=60
+            if isinstance(header,str) and len(header)<=6 and header.isascii() and header.isdigit():retry=max(1,min(int(header),300))
+            fail(429,'AI服务暂时繁忙，请按提示稍后重试', 'rate_limited',retry_after=retry,retryable=True)
+        fail(502,'AI服务暂时不可用，请稍后手动重试','provider_status')
+    except APIError:
+        raise
+    except Exception:
+        fail(502,'AI服务返回异常，请稍后手动重试','unexpected_response')
     finally:
-        from flask import has_request_context
         if has_request_context():g.ai_ms=g.get('ai_ms',0)+(time.perf_counter()-ai_started)*1000
-    if resp.choices[0].finish_reason == 'length':
-        raise APIError(502, 'AI 回复达到长度上限，内容未完整生成，请重试')
-    content = resp.choices[0].message.content
-    if not content or not content.strip():
-        raise APIError(502, "AI 返回内容为空，请重试")
-    return content.strip()
 
 
 def extract_json(text):
+    if not isinstance(text,str):return None
     text = text.strip()
+    if text.startswith('```'):
+        fenced=re.fullmatch(r'```(?:json)?\s*(.*?)\s*```',text,re.S|re.I)
+        if not fenced:return None
+        text=fenced.group(1)
+    def unique_object(pairs):
+        result={}
+        for key,value in pairs:
+            if key in result:raise ValueError('duplicate_json_key')
+            result[key]=value
+        return result
     try:
-        return json.loads(text)
+        value=json.loads(text,object_pairs_hook=unique_object)
+        return value if isinstance(value,dict) else None
     except Exception:
-        pass
-    m = re.search(r"\{.*\}", text, re.S)
-    if m:
-        try:
-            return json.loads(m.group(0))
-        except Exception:
-            return None
-    return None
+        return None
 
 
 def build_answer_instruction(mode, main_index):

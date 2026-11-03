@@ -42,6 +42,11 @@ $env:APP_INSECURE = "1"  # 仅本机HTTP调试
 
 ## 文档
 
+- [逐点优化、测试与回滚记录](docs/stepwise-optimization.md)
+- [开始请求回执与恢复](docs/start-request-recovery.md)
+- [评分依据与有效作答覆盖](docs/scoring-evidence.md)
+- [AI服务异常与有限重试](docs/ai-service-errors.md)
+
 - [开始面试与公网启动故障恢复](docs/startup-recovery.md)
 
 - [账户、安全、数据库迁移与运维交付](docs/accounts-and-operations.md)
