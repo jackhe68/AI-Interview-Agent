@@ -10,21 +10,19 @@ param(
 $ErrorActionPreference = "Stop"
 $root = Split-Path -Parent $PSScriptRoot
 
-Write-Host "==> 打包（排除 .venv / .public-test / __pycache__ / .git）"
-Push-Location $root
-try {
-    if (Test-Path "deploy\app.tar.gz") { Remove-Item "deploy\app.tar.gz" -Force }
-    tar -czf "deploy\app.tar.gz" `
-        --exclude=.venv --exclude=.public-test --exclude=__pycache__ `
-        --exclude=.git --exclude="deploy/app.tar.gz" .
-}
-finally { Pop-Location }
+Write-Host "==> Build a code-only release; runtime files stay on the server."
+$pythonPath = Join-Path $root '.venv\Scripts\python.exe'
+if (-not (Test-Path -LiteralPath $pythonPath)) { $pythonPath = 'python' }
+$releaseId = [guid]::NewGuid().ToString('N')
+$archivePath = Join-Path $root ('.test-artifacts\releases\' + $releaseId + '.tar.gz')
+& $pythonPath (Join-Path $PSScriptRoot 'package_release.py') --output $archivePath
+if ($LASTEXITCODE -ne 0) { throw 'Code-only release packaging failed. Nothing was uploaded.' }
 
-$size = [math]::Round((Get-Item "$root\deploy\app.tar.gz").Length / 1MB, 1)
-Write-Host "    包大小 $size MB（含 models/ 约 356MB 情绪模型）"
+$size = [math]::Round((Get-Item -LiteralPath $archivePath).Length / 1MB, 1)
+Write-Host "    Code release: $size MB; no database, credentials, uploads or model cache."
 
 Write-Host "==> 上传到 $User@$Server"
-scp "$root\deploy\app.tar.gz" "${User}@${Server}:/tmp/app.tar.gz"
+scp $archivePath "${User}@${Server}:/tmp/app.tar.gz"
 
 Write-Host "==> 解包到 $RemoteDir"
 ssh "${User}@${Server}" "sudo mkdir -p $RemoteDir && sudo tar -xzf /tmp/app.tar.gz -C $RemoteDir && sudo chown -R ${User}:${User} $RemoteDir && rm -f /tmp/app.tar.gz"

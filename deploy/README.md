@@ -31,7 +31,17 @@ ssh deploy@<IP> "sudo -v"
 powershell -ExecutionPolicy Bypass -File deploy\upload.ps1 -Server <IP>
 ```
 
-包内已排除 `.venv`、`.public-test`、`__pycache__`、`.git`；`models/` 会一起传（约 356MB）。
+发布包仅包含 `package_release.py` 明确列出的运行代码、页面、静态资源、PDF字体及运维文件，并附带文件摘要清单。数据库、删除台账、真实 `.env`、签名密钥、录音、模型缓存、日志和测试产物不读取、不上传，更新代码不会用本地数据覆盖服务器数据。
+
+首次部署前，需在服务器单独创建 `.env` 并填写密钥；`.env.example` 只提供模板。数据库由应用首次初始化，签名密钥按 `wsgi.py` 的既有方式持久化生成。若需要迁移现有数据，使用账户运维文档中的备份/恢复步骤，不能把数据库混入代码包。Whisper缓存由服务器预热准备，不随代码发布。
+
+只生成发布包、供本地检查（不会上传或连接服务器）：
+
+```powershell
+.\.venv\Scripts\python.exe deploy\package_release.py --output .test-artifacts\release-review.tar.gz
+```
+
+输出须为新文件，避免覆盖旧版本。回滚代码时使用已验证的旧代码包；数据库、配置、签名与删除台账独立保留。不得通过恢复旧数据库来回滚一次普通代码更新。
 
 ## 3. 一键初始化（服务器）
 
