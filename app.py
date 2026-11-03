@@ -373,6 +373,10 @@ def _generate_report(interview_id):
     if answered < MAIN_QUESTION_COUNT:
         confidence_note = f"本场仅完成 {answered} 次回答，评价可信度有限，建议完成完整面试以获得更准确的反馈。"
 
+    try:
+        practice_detail=normalize_practice(data,messages)
+    except ValueError:
+        raise APIError(502,'评分维度与理由对应结果不一致，已保留作答和点评，请稍后重试生成报告') from None
     report = {
         "interview_id": interview_id,
         "overall_score": overall,
@@ -385,7 +389,7 @@ def _generate_report(interview_id):
         "overall_comment": overall_comment,
         "knowledge_summary": knowledge_summary,
         "confidence_note": confidence_note,
-        "detail": {"unassessed":unassessed, "scoring_version":"practice-v2-coverage", "raw_dim_count": 4, **normalize_practice(data, messages)},
+        "detail": {"unassessed":unassessed, "scoring_version":"practice-v3-consistency", "raw_dim_count": 4, **practice_detail},
     }
     dbm.save_report(report)
     # Optional voice advice is requested separately after the score is displayed.

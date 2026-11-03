@@ -17,7 +17,7 @@ GRADE = dict(knowledge_score=80, completeness_score=70, expression_score=90, job
              weaknesses=[dict(topic='索引取舍', score=55, explanation='未说明新增索引对写入的影响')],
              suggestions=['补充索引维护成本，再用读多写少与写多读少两个场景检查取舍'],
              overall_comment='已说明排查与验证过程，优先补齐索引的写入代价。', knowledge_summary='能说明基本排查流程',
-             radar_dimensions=[dict(key=key, score=60+i, answer_sequence=2,
+             radar_dimensions=[dict(key=key, score=[80,70,90,60][i] if i<4 else 60+i, answer_sequence=2,
                                     evidence='通过增加联合索引验证效果', reason='结合实际回答评估')
                                for i, (key, _) in enumerate(DIMENSIONS)],
              answer_reviews=[dict(answer_sequence=2, evidence='通过增加联合索引验证效果',

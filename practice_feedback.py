@@ -58,7 +58,11 @@ def normalize_practice(data, messages):
         linked = linked_item(item, pairs)
         value = score(item.get('score')) if isinstance(item, dict) else None
         if linked and value is not None and item.get('key') in dict(DIMENSIONS):
-            dimensions[item['key']] = dict(linked, score=value, reason=text(item.get('reason'), 800))
+            key=item['key']
+            if key in dimensions:raise ValueError('duplicate_dimension')
+            if key in dict(DIMENSIONS[:4]) and score(data.get(key+'_score'))!=value:
+                raise ValueError('conflicting_dimension_score')
+            dimensions[key] = dict(linked, score=value, reason=text(item.get('reason'), 800))
     reviews = []
     seen = set()
     raw_reviews = data.get('answer_reviews')
@@ -82,9 +86,13 @@ def report_practice(report, messages):
     for key, label in DIMENSIONS:
         entry = saved_dimensions.get(key) or {}
         value = score(report.get(key + '_score')) if key in dict(DIMENSIONS[:4]) else score(entry.get('score'))
+        reason=text(entry.get('reason'))
+        if key in dict(DIMENSIONS[:4]) and score(entry.get('score')) is not None and score(entry.get('score'))!=value:
+            # Preserve historical scores; do not present an old contradictory reason as evidence.
+            reason='历史维度说明与分数不一致，暂不展示该评分理由；原报告分数保留。'
         if detail.get('unassessed'):value=None
         dimensions.append(dict(key=key, label=label, score=value,
-                               evidence=text(entry.get('evidence')), reason=text(entry.get('reason')),
+                               evidence=text(entry.get('evidence')), reason=reason,
                                answer_sequence=entry.get('answer_sequence')))
     saved_reviews = {r['answer_sequence']: r for r in detail.get('answer_reviews', [])
                      if isinstance(r, dict) and isinstance(r.get('answer_sequence'), int)}
