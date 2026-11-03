@@ -623,19 +623,24 @@
       replaySameBtn.disabled = true;
       replaySameBtn.classList.add("is-loading");
       replaySameBtn.innerHTML = "正在生成首题…";
-      fetch("/api/interview/start", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(Object.assign({ job: cfg.job, level: cfg.level }, cfg.major_id ? {major_id:cfg.major_id} : {}))
+      var retryId;
+      var reset=document.getElementById('replayResetBtn');if(reset)reset.hidden=true;
+      var originalScope=window.Account && Account.scope;
+      (window.Account ? Account.refresh() : Promise.resolve()).then(function(){
+        if(window.Account && Account.scope!==originalScope){var changed=new Error('登录状态已改变，请刷新后确认练习配置；尚未发出AI请求。');changed.startPreparation=true;throw changed;}
+        return InterviewStarts.request(Object.assign({ job: cfg.job, level: cfg.level }, cfg.major_id ? {major_id:cfg.major_id} : {}));
       })
-        .then(function (res) { return res.json().then(function (d) { return { ok: res.ok, status: res.status, data: d }; }); })
         .then(function (r) {
+          retryId=r.request_id;
           if (!r.ok || !r.data.session_id) {
-            showToast(r.data && r.data.error ? r.data.error : "面试启动失败（" + r.status + "），请重试");
-            replaySameBtn.disabled = false;
-            replaySameBtn.classList.remove("is-loading");
-            replaySameBtn.innerHTML = replayOriginalHTML;
-            return;
+            var code=r.data && r.data.code;
+            if(code==='start_uncertain' || code==='start_conflict'){
+              if(!reset){reset=document.createElement('button');reset.type='button';reset.id='replayResetBtn';reset.className='btn btn--ghost';replaySameBtn.parentNode.appendChild(reset);}
+              reset.textContent='我已核对历史，允许新建一场';reset.hidden=false;
+              reset.onclick=function(){InterviewStarts.finish(retryId);reset.hidden=true;showToast('已准备新请求，请再次点击再练一次。');};
+            } else if(code!=='start_in_progress')InterviewStarts.finish(retryId);
+            var failure=new Error(r.data && r.data.error ? r.data.error : '面试启动失败，请先从历史记录核对。');
+            failure.startPreparation=true;throw failure;
           }
           try {
             if(window.Account && !Account.ownsPage())throw new Error("账户已切换，请刷新页面");
@@ -643,13 +648,18 @@
               session_id: r.data.session_id, job: r.data.job, level: r.data.level,
               selection: r.data.selection || {},
               question_sequence: r.data.question_sequence || 1,
-              question: r.data.question, progress: r.data.progress
+              question: r.data.question, progress: r.data.progress, answered_count:r.data.answered_count || 0,
+              finished:!!r.data.finished,background_active:!!r.data.background_active
             }));
-          } catch (e) {}
+          } catch (e) {
+            var storageFailure=new Error('本场面试已保存，但浏览器未能保存进入信息。请允许本站存储后，从历史记录继续，避免重复开始。');
+            storageFailure.startPreparation=true;throw storageFailure;
+          }
+          InterviewStarts.finish(retryId);
           window.location.href = "/interview";
         })
-        .catch(function () {
-          showToast("网络连接失败，无法连接面试服务");
+        .catch(function (error) {
+          showError(error.startPreparation ? error.message : error.name==='AbortError' ? '首题等待超时。请先从历史记录核对已保存练习，再手动重试。' : '连接暂时中断或返回异常。请先从历史记录核对，当前报告仍保留。');
           replaySameBtn.disabled = false;
           replaySameBtn.classList.remove("is-loading");
           replaySameBtn.innerHTML = replayOriginalHTML;

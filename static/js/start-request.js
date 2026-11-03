@@ -23,6 +23,20 @@
     return Object.assign({},payload,{request_id:saved.id});
    });
   },
+  request:function(payload){
+   var controller=window.AbortController ? new AbortController() : null;
+   var timer=setTimeout(function(){if(controller)controller.abort();},90000);
+   var prepared;
+   return InterviewStarts.prepare(payload).then(function(value){
+    prepared=value;
+    return fetch('/api/interview/start',{method:'POST',headers:{'Content-Type':'application/json'},
+     body:JSON.stringify(prepared),signal:controller ? controller.signal : undefined});
+   }).then(function(response){return response.json().then(function(data){
+    if(response.ok && (!data || typeof data.session_id!=='string' || !data.session_id || typeof data.question!=='string'))
+     throw unavailable('服务返回的进入信息不完整，请先从历史记录核对已保存的面试。');
+    return {ok:response.ok,status:response.status,data:data,request_id:prepared.request_id};
+   });}).finally(function(){clearTimeout(timer);});
+  },
   finish:function(id){
    try{var key=storageKey(),saved=JSON.parse(localStorage.getItem(key)||'null');if(saved && saved.id===id)localStorage.removeItem(key);}catch(e){}
   }

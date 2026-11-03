@@ -293,25 +293,11 @@
     startBtn.disabled = true;
     startBtn.innerHTML = "正在生成首题…";
 
-    var startController = window.AbortController ? new AbortController() : null;
-    var startTimer = setTimeout(function(){if(startController)startController.abort();},90000);
     var resetStart=document.getElementById('startResetBtn');
     if(resetStart)resetStart.hidden=true;
-    InterviewStarts.prepare(payload).then(function(prepared){
-     payload=prepared;
-     return fetch("/api/interview/start", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-      signal: startController ? startController.signal : undefined
-     });
-    })
-      .then(function (res) {
-        return res.json().then(function (data) {
-          return { ok: res.ok, status: res.status, data: data };
-        });
-      })
+    InterviewStarts.request(payload)
       .then(function (r) {
+        payload.request_id=r.request_id;
         if (!r.ok) {
           var code=r.data && r.data.code;
           if(code==='start_uncertain' || code==='start_conflict'){
@@ -352,7 +338,7 @@
         starting = false;
         syncUI();
         startBtn.innerHTML = original;
-      }).finally(function(){clearTimeout(startTimer);});
+      });
   });
 
   syncUI();
