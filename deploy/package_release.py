@@ -69,10 +69,29 @@ def build_release(root, output):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--output', required=True)
+    operation = parser.add_mutually_exclusive_group(required=True)
+    operation.add_argument('--output')
+    operation.add_argument('--verify')
     args = parser.parse_args()
-    count = build_release(Path(__file__).resolve().parents[1], args.output)
+    count = verify_release(args.verify) if args.verify else build_release(Path(__file__).resolve().parents[1], args.output)
     print(json.dumps(dict(files=count, runtime_data_included=False)))
+
+
+def verify_release(path):
+    with tarfile.open(path, 'r:gz') as archive:
+        members = archive.getmembers()
+        expected = set(RELEASE_FILES) | {'release-manifest.json'}
+        if len(members) != len(expected) or {m.name for m in members} != expected or not all(m.isfile() for m in members):
+            raise ValueError('Unexpected release archive contents')
+        manifest = json.load(archive.extractfile('release-manifest.json'))
+        entries = manifest.get('files', [])
+        if manifest.get('schema') != 'code-release-v1' or len(entries) != len(RELEASE_FILES) or {e['path'] for e in entries} != set(RELEASE_FILES):
+            raise ValueError('Invalid release manifest')
+        for entry in entries:
+            content = archive.extractfile(entry['path']).read()
+            if len(content) != entry['bytes'] or hashlib.sha256(content).hexdigest() != entry['sha256']:
+                raise ValueError('Release file verification failed: ' + entry['path'])
+    return len(RELEASE_FILES)
 
 
 if __name__ == '__main__':

@@ -43,6 +43,8 @@ powershell -ExecutionPolicy Bypass -File deploy\upload.ps1 -Server <IP>
 
 输出须为新文件，避免覆盖旧版本。回滚代码时使用已验证的旧代码包；数据库、配置、签名与删除台账独立保留。不得通过恢复旧数据库来回滚一次普通代码更新。
 
+也可运行 `powershell -NoProfile -ExecutionPolicy Bypass -File deploy\upload.ps1 -PackageOnly`，同时生成并校验本地发布包，不连接服务器。正式上传前逐文件核对摘要；打包、校验、上传或远端解包任一步失败，脚本以非零退出码停止，不执行后续步骤。每次上传使用独立临时文件名，不自动重启服务，不递归改动运行数据权限。远端解包失败时不要重启服务，需先恢复完整代码包。PS5和PS7均有隔离控制流测试。
+
 ## 3. 一键初始化（服务器）
 
 ```bash

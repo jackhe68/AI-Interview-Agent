@@ -1,31 +1,51 @@
-# 从 Windows 上传代码到服务器：.
-#   powershell -ExecutionPolicy Bypass -File deploy\upload.ps1 -Server 47.x.x.x
-# 前提：本机已能 ssh deploy@服务器（已配公钥）
+﻿# Upload code only. Configuration and persistent data stay on the server.
 param(
-    [Parameter(Mandatory = $true)][string]$Server,
-    [string]$User = "deploy",
-    [string]$RemoteDir = "/var/www/aiinterview"
+    [ValidatePattern('^[A-Za-z0-9][A-Za-z0-9.:-]*$')][string]$Server,
+    [ValidatePattern('^[A-Za-z_][A-Za-z0-9_-]*$')][string]$User = 'deploy',
+    [ValidatePattern('^/(?:[A-Za-z0-9_-][A-Za-z0-9_.-]*/?)+$')][string]$RemoteDir = '/var/www/aiinterview',
+    [switch]$PackageOnly
 )
-
-$ErrorActionPreference = "Stop"
+$ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
 
-Write-Host "==> Build a code-only release; runtime files stay on the server."
-$pythonPath = Join-Path $root '.venv\Scripts\python.exe'
-if (-not (Test-Path -LiteralPath $pythonPath)) { $pythonPath = 'python' }
-$releaseId = [guid]::NewGuid().ToString('N')
-$archivePath = Join-Path $root ('.test-artifacts\releases\' + $releaseId + '.tar.gz')
-& $pythonPath (Join-Path $PSScriptRoot 'package_release.py') --output $archivePath
-if ($LASTEXITCODE -ne 0) { throw 'Code-only release packaging failed. Nothing was uploaded.' }
+function Invoke-Checked([string]$program, [string[]]$arguments, [string]$failure) {
+    $global:LASTEXITCODE = 0
+    & $program @arguments
+    if ($LASTEXITCODE -ne 0) { throw $failure }
+}
 
-$size = [math]::Round((Get-Item -LiteralPath $archivePath).Length / 1MB, 1)
-Write-Host "    Code release: $size MB; no database, credentials, uploads or model cache."
-
-Write-Host "==> 上传到 $User@$Server"
-scp $archivePath "${User}@${Server}:/tmp/app.tar.gz"
-
-Write-Host "==> 解包到 $RemoteDir"
-ssh "${User}@${Server}" "sudo mkdir -p $RemoteDir && sudo tar -xzf /tmp/app.tar.gz -C $RemoteDir && sudo chown -R ${User}:${User} $RemoteDir && rm -f /tmp/app.tar.gz"
-
-Write-Host "==> 完成。下一步在服务器执行："
-Write-Host "    sudo bash $RemoteDir/deploy/bootstrap.sh"
+try {
+    if (-not $PackageOnly -and -not $Server) { throw 'Specify -Server, or use -PackageOnly for local review.' }
+    if (-not $PackageOnly) {
+        Get-Command scp -ErrorAction Stop | Out-Null
+        Get-Command ssh -ErrorAction Stop | Out-Null
+    }
+    $pythonPath = Join-Path $root '.venv\Scripts\python.exe'
+    if (-not (Test-Path -LiteralPath $pythonPath)) { $pythonPath = 'python' }
+    $releaseId = [guid]::NewGuid().ToString('N')
+    $archivePath = Join-Path $root ('.test-artifacts\releases\' + $releaseId + '.tar.gz')
+    $builder = Join-Path $PSScriptRoot 'package_release.py'
+    Write-Host '==> Build and verify a code-only release; runtime data is excluded.'
+    Invoke-Checked $pythonPath @($builder,'--output',$archivePath) 'Packaging failed. Nothing was uploaded.'
+    if (-not (Test-Path -LiteralPath $archivePath -PathType Leaf) -or (Get-Item -LiteralPath $archivePath).Length -eq 0) {
+        throw 'The release archive was not created. Nothing was uploaded.'
+    }
+    Invoke-Checked $pythonPath @($builder,'--verify',$archivePath) 'Archive verification failed. Nothing was uploaded.'
+    if ($PackageOnly) {
+        Write-Host ('Local release verified: ' + $archivePath)
+        exit 0
+    }
+    $hostName = if ($Server.Contains(':')) { '[' + $Server + ']' } else { $Server }
+    $remoteArchive = '/tmp/ai-interview-' + $releaseId + '.tar.gz'
+    Write-Host '==> Upload the verified code archive.'
+    Invoke-Checked 'scp' @($archivePath,($User + '@' + $hostName + ':' + $remoteArchive)) 'Upload failed. Server files were not extracted.'
+    # Inputs are restricted to plain host/user/absolute-path characters above.
+    # No recursive ownership or permission changes to existing runtime data.
+    $command = "sudo -n mkdir -p -- '$RemoteDir' && sudo -n tar --no-same-owner -xzf '$remoteArchive' -C '$RemoteDir' && rm -f -- '$remoteArchive'"
+    Invoke-Checked 'ssh' @(($User + '@' + $hostName),$command) 'Server extraction failed. Do not restart until the failure is resolved.'
+    Write-Host 'Code upload completed. No service was restarted and no database was restored.'
+    Write-Host 'For first installation, configure the server separately and follow deploy/README.md.'
+} catch {
+    Write-Host ('Release failed: ' + $_.Exception.Message)
+    exit 1
+}

@@ -1,6 +1,7 @@
 """Code packaging never reads or replaces runtime data; all data here is fictional."""
 import hashlib
 import importlib.util
+import io
 import json
 import sys
 import tarfile
@@ -45,6 +46,7 @@ class ReleaseTests(unittest.TestCase):
             manifest = json.load(archive.extractfile('release-manifest.json'))
             for entry in manifest['files']:
                 self.assertEqual(hashlib.sha256(archive.extractfile(entry['path']).read()).hexdigest(), entry['sha256'])
+        self.assertEqual(release.verify_release(self.output), len(release.RELEASE_FILES))
 
     def test_update_preserves_existing_server_data_and_configuration(self):
         destination = Path(self.temp.name)/'server'
@@ -89,6 +91,28 @@ class ReleaseTests(unittest.TestCase):
         with patch.object(tarfile.TarFile, 'addfile', side_effect=OSError('fictional disk error')):
             with self.assertRaises(OSError): release.build_release(self.root, self.output)
         self.assertFalse(self.output.exists())
+
+    def test_corrupt_archive_is_rejected(self):
+        self.output.write_bytes(b'fictional invalid archive')
+        with self.assertRaises(tarfile.ReadError): release.verify_release(self.output)
+
+    def test_archive_with_extra_runtime_file_is_rejected(self):
+        release.build_release(self.root, self.output)
+        extra = self.output.with_name('extra.tar.gz')
+        with tarfile.open(self.output) as source, tarfile.open(extra,'w:gz') as destination:
+            for member in source.getmembers(): destination.addfile(member,source.extractfile(member))
+            member=tarfile.TarInfo('.env');member.size=0;destination.addfile(member)
+        with self.assertRaises(ValueError): release.verify_release(extra)
+
+    def test_modified_file_does_not_pass_manifest_verification(self):
+        release.build_release(self.root, self.output)
+        changed = self.output.with_name('changed.tar.gz')
+        with tarfile.open(self.output) as source, tarfile.open(changed,'w:gz') as destination:
+            for member in source.getmembers():
+                content=source.extractfile(member).read()
+                if member.name=='app.py':content=b'changed fictional code';member.size=len(content)
+                destination.addfile(member,io.BytesIO(content))
+        with self.assertRaises(ValueError): release.verify_release(changed)
 
 
 if __name__ == '__main__': unittest.main(verbosity=2)
