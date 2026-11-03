@@ -872,15 +872,21 @@ def api_answer():
 def api_end():
     data = request.get_json(silent=True) or {}
     session_id = data.get("session_id") or ""
-    session = load_session(session_id)
-    if not session:
-        return jsonify({"error": "面试会话不存在或已过期"}), 404
-    answered = sum(1 for m in session["history"] if m["role"] == "user")
-    try:
-        dbm.finish_interview(session_id, "ended")
-    except Exception:
-        return jsonify(error='结束状态保存失败，请重试；回答仍保留'), 503
-    session["finished"] = True
+    # Share the answer admission lock; never end a turn while its AI work is in flight.
+    # The lock covers only local state/DB, never a provider call.
+    with ANSWER_STATE_LOCK:
+        session = load_session(session_id)
+        if not session:
+            return jsonify({"error": "面试会话不存在或已过期"}), 404
+        if session.get('busy'):
+            return jsonify(error='上一条回答仍在处理，请等待保存完成后再结束；草稿仍保留',code='answer_in_progress'),409
+        answered = sum(1 for m in session["history"] if m["role"] == "user")
+        if not session['finished']:
+            try:
+                dbm.finish_interview(session_id, "ended")
+            except Exception:
+                return jsonify(error='结束状态保存失败，请重试；回答仍保留'), 503
+            session["finished"] = True
     # Return immediately; report generation belongs to the report-page request.
     return jsonify({
         "finished": True,
