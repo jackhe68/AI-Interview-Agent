@@ -109,8 +109,10 @@
     answerInput.readOnly = finished;
   }
   function displayFeedback(comment) {
-    if (comment) { feedbackCard.open=!!finished; feedbackBodyEl.textContent = comment; feedbackTagEl.textContent = '展开详情'; document.querySelector('#feedbackSummary>span').textContent='上一题：'+comment.split('\n')[0].slice(0,70)+(comment.length>70?'…':''); feedbackCard.classList.remove('is-hidden'); }
+    if (comment) { feedbackCard.open=!!finished; feedbackBodyEl.textContent = comment; syncFeedbackLabel(); feedbackCard.classList.remove('is-hidden'); }
   }
+  function syncFeedbackLabel() { feedbackTagEl.textContent=feedbackCard.open ? '收起详情' : '展开详情'; }
+  feedbackCard.addEventListener('toggle',syncFeedbackLabel);
   function applySnapshot(data) {
     var oldId = questionId, previous = drafts.get(oldId);
     if (data.question_sequence !== oldId) {

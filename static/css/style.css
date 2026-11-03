@@ -723,6 +723,11 @@ textarea, input, select { font-family: inherit; }
 }
 .ai-feedback__body { font-size: 14px; color: var(--text-2); white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.8; }
 .ai-feedback.is-hidden { display: none; }
+.ai-feedback > .ai-feedback__head { display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px; }
+.ai-feedback__head .ai-feedback__body { grid-column:1 / -1;min-width:0; }
+.ai-feedback:not([open]) .ai-feedback__body { display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden; }
+.ai-feedback[open] .ai-feedback__body { display:block; }
+.ai-feedback > summary:focus-visible { outline:2px solid var(--primary);outline-offset:5px;border-radius:6px; }
 
 /* 右列：光球舞台 */
 .iv-stage {
