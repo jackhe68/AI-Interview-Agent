@@ -75,6 +75,10 @@
         </div>
       </section>
 
+      <section class="glass-card last-answer-card" id="lastAnswerCard" hidden>
+        <h3>你的最后一次回答</h3>
+        <p id="lastAnswerText"></p>
+      </section>
       <details class="glass-card ai-feedback is-hidden" id="aiFeedback">
         <summary class="ai-feedback__head" id="feedbackSummary">
           <span>上一题点评与改进建议</span>
@@ -83,9 +87,11 @@
         </summary>
       </details>
       <section class="glass-card completion-card is-hidden" id="completionCard">
-        <h3>本场作答已完成</h3>
-        <p>最后一题的点评已保留在上方。看完建议后，再手动进入面试报告。</p>
-        <button class="btn btn--primary" id="viewReportBtn" type="button">结束面试并查看报告</button>
+        <h3 id="completionTitle">本场面试已结束</h3>
+        <p id="completionDescription"></p>
+        <p id="completionStatus" role="status" aria-live="polite"></p>
+        <button class="btn btn--primary" id="viewReportBtn" type="button">查看面试报告</button>
+        <p id="completionReportHint" role="status" aria-live="polite"></p>
       </section>
 
       <section class="glass-card voice-card" id="voiceCard">
@@ -116,7 +122,7 @@
         </div>
       </section>
 
-      <section class="glass-card text-input-card">
+      <section class="glass-card text-input-card" id="answerCard">
         <div class="text-input-card__head">
           <label for="answerInput">✍️ 回答内容（可文字输入或语音转写后编辑）</label>
           <span style="color:var(--text-3); font-size:12px;">Ctrl/⌘ + Enter 快速提交</span>
@@ -135,7 +141,7 @@
     </div>
 
     <!-- 右列：光球舞台 -->
-    <section class="glass-card iv-stage">
+    <section class="glass-card iv-stage" id="answerStage">
       <!-- AI 光球 -->
       <div class="orb">
         <div class="orb__halo"></div>

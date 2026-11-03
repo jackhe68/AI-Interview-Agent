@@ -812,6 +812,30 @@ def api_interview_state(session_id):
     questions = [m for m in messages if m['role'] == 'assistant' and m['message_type'] in ('main_question','followup')]
     question = questions[-1] if questions else None
     comments = [m for m in messages if m['message_type'] == 'comment']
+    # Display-only completion facts from persisted questions/answers, never client text.
+    answers = {}
+    current = None
+    for message in messages:
+        if message['role']=='assistant' and message['message_type'] in ('main_question','followup'):
+            current=message['sequence']
+        elif message['role']=='user' and message['message_type']=='answer' and current is not None:
+            answers[current]=message['content'].strip()
+    skipped=sum(answers.get(q['sequence'])==SKIP_ANSWER for q in questions)
+    unanswered=sum(not answers.get(q['sequence']) for q in questions)
+    processed=bool(iv['status']=='finished' and sum(q['message_type']=='main_question' for q in questions)==MAIN_QUESTION_COUNT and not unanswered)
+    all_answered=processed and skipped==0
+    completion=dict(kind='active' if iv['status']=='active' else 'complete' if all_answered else 'skipped' if skipped else 'ended',
+                    all_answered=all_answered,all_processed=processed,skipped=skipped,unanswered=unanswered,
+                    question_count=len(questions),answered_count=len(answers),status=iv['status'])
+    report_state='ready' if dbm.get_report(session_id) else 'not_generated'
+    if report_state!='ready':
+        with dbm.get_conn() as conn:
+            if conn.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='report_jobs'").fetchone():
+                job=conn.execute('SELECT state,lease_until FROM report_jobs WHERE interview_id=?',(session_id,)).fetchone()
+                if job and job['state'] in ('pending','running','failed'):
+                    report_state=job['state']
+                    if report_state in ('pending','running') and (REPORT_JOB_SERVICE is None or not REPORT_JOB_SERVICE.thread or not REPORT_JOB_SERVICE.thread.is_alive() or (report_state=='running' and job['lease_until']<time.time())):
+                        report_state='interrupted'
     from datetime import datetime
     try:
         end_time = datetime.fromisoformat(iv['ended_at']).timestamp() if iv['ended_at'] else time.time()
@@ -824,6 +848,7 @@ def api_interview_state(session_id):
                    progress=dict(main=iv['current_question'],total=MAIN_QUESTION_COUNT,
                                  type='followup' if question and question['message_type']=='followup' else 'main'),
                    finished=iv['status'] != 'active', comment=comments[-1]['content'] if comments else '',
+                   completion=completion,last_answer=answers.get(question['sequence'],'') if question else '',report_state=report_state,
                    answered_count=sum(m['role']=='user' for m in messages),
                    processing=bool(SESSIONS.get(session_id, {}).get('busy')))
     response.headers['Cache-Control'] = 'private, no-store'

@@ -979,6 +979,14 @@ textarea, input, select { font-family: inherit; }
 .completion-card h3 { font-size:18px; margin-bottom:10px; }
 .completion-card p { color:var(--text-2); line-height:1.8; margin-bottom:18px; font-size:14px; }
 .completion-card.is-hidden,.draft-previous.is-hidden { display:none; }
+.iv-main.is-complete {grid-template-columns:minmax(0,1fr);max-width:900px;padding-bottom:32px;}
+.last-answer-card {padding:22px;min-width:0;}
+.last-answer-card h3 {font-size:15px;margin-bottom:10px;}
+.last-answer-card p {white-space:pre-wrap;overflow-wrap:anywhere;font-size:14px;line-height:1.8;color:var(--text-2);}
+.is-complete .completion-card {background:#fff;}
+.completion-card #completionStatus {font-weight:600;color:var(--primary-dk);}
+.completion-card #completionReportHint {margin:12px 0 0;}
+.completion-card .btn {max-width:100%;white-space:normal;}
 @media (max-width: 640px) {
   .text-input-row textarea { min-height: 280px; }
   .text-input-row #submitAnswerBtn { width: 100%; min-height: 48px; }

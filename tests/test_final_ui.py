@@ -2,6 +2,7 @@
 import copy,json,os,sys,threading,time,unittest
 from io import BytesIO
 from pathlib import Path
+from unittest.mock import patch
 from playwright.sync_api import sync_playwright
 from werkzeug.serving import make_server
 from pypdf import PdfReader
@@ -92,6 +93,97 @@ class FinalUITests(unittest.TestCase):
             self.shot(page,'before-feedback-collapsed-'+str(width));page.locator('#feedbackSummary').click();self.shot(page,'before-feedback-expanded-'+str(width))
             for _ in range(5):self.answer(page,sid)
             page.reload(wait_until='networkidle');self.shot(page,'before-completed-'+str(width))
+    def test_normal_completion_refresh_report_and_pdf(self):
+        for width in (1280,390):
+            page=self.page(width);sid=self.start(page)
+            for _ in range(5):self.answer(page,sid)
+            self.interview(page);self.assertTrue(page.locator('#voiceCard').is_visible());self.assertTrue(page.locator('#answerCard').is_visible())
+            last='最后回答唯一标记：我负责订单接口，使用事务控制一致性，并比较并发测试前后的结果。'
+            page.locator('#answerInput').fill(last);page.locator('#submitAnswerBtn').click()
+            page.wait_for_function('document.querySelector("#completionTitle").textContent==="本场面试已完成"')
+            state=self.state(page,sid);self.assertTrue(state['completion']['all_answered']);self.assertEqual(state['completion']['question_count'],6)
+            self.assertEqual(page.locator('#completionStatus').inner_text(),'全部问题已完成')
+            self.assertEqual(page.locator('#lastAnswerText').inner_text(),last)
+            question=page.locator('#questionText').inner_text();comment=page.locator('#feedbackBody').inner_text()
+            self.assertIn('反馈末尾唯一标记',comment)
+            for selector in ('#voiceCard','#micBtn','#answerInput','#submitAnswerBtn','#answerStage','#skipBtn','#endBtn'):
+                self.assertFalse(page.locator(selector).is_visible(),selector)
+            self.assertEqual(page.locator('#viewReportBtn').inner_text(),'生成并查看报告')
+            self.assertEqual(page.locator('#progressTrack').get_attribute('aria-valuenow'),'100')
+            page.reload(wait_until='networkidle');page.wait_for_function('!document.querySelector("#completionCard").classList.contains("is-hidden")')
+            self.assertEqual(page.locator('#questionText').inner_text(),question);self.assertEqual(page.locator('#feedbackBody').inner_text(),comment)
+            self.assertEqual(page.locator('#lastAnswerText').inner_text(),last);self.assertFalse(page.locator('#answerCard').is_visible())
+            self.layout(page);self.shot(page,'completed-'+str(width))
+            before=len(grade_calls)
+            page.locator('#viewReportBtn').click();page.wait_for_url('**/report?*')
+            page.wait_for_function('!document.querySelector("#reportBody").classList.contains("is-hidden")')
+            page.reload(wait_until='networkidle');self.assertEqual(len(grade_calls),before+1)
+            with page.expect_download() as download:page.locator('#exportBtn').click()
+            pdf=Path(download.value.path()).read_bytes();(OUT/('report-'+str(width)+'.pdf')).write_bytes(pdf)
+            reader=PdfReader(BytesIO(pdf));text=''.join(p.extract_text() for p in reader.pages);compact=''.join(text.split())
+            for expected in ('八维能力分析','专业知识','回答完整性','逻辑表达','岗位相关性','问题分析','实践应用','举例论证','复盘改进','反馈末尾唯一标记','最后回答唯一标记'):
+                self.assertIn(expected,compact)
+            self.shot(page,'report-'+str(width));self.interview(page)
+            page.wait_for_function('document.querySelector("#viewReportBtn").textContent==="查看面试报告"')
+    def test_partial_skipped_and_manual_end_have_accurate_states(self):
+        page=self.page();sid=self.start(page);self.answer(page,sid);self.interview(page)
+        page.evaluate('const s=JSON.parse(localStorage.getItem("iv-session"));s.finished=true;localStorage.setItem("iv-session",JSON.stringify(s))')
+        page.reload(wait_until='networkidle')
+        self.assertTrue(page.locator('#answerCard').is_visible());self.assertTrue(page.locator('#voiceCard').is_visible());self.assertFalse(page.locator('#completionCard').is_visible())
+        self.assertEqual(self.state(page,sid)['completion']['kind'],'active');self.shot(page,'unfinished-390')
+        page.locator('#answerInput').fill('刷新后继续回答，补充验证结果。');page.locator('#submitAnswerBtn').click()
+        page.wait_for_function('document.querySelector("#answeredCount").textContent==="2"')
+        self.answer(page,sid,True)
+        for _ in range(3):self.answer(page,sid)
+        self.assertEqual(self.state(page,sid)['completion']['kind'],'skipped');self.assertFalse(self.state(page,sid)['completion']['all_answered'])
+        page.reload(wait_until='networkidle');self.assertIn('跳过了1个问题',page.locator('#completionDescription').inner_text());self.assertNotIn('已完成全部作答',page.locator('#completionCard').inner_text());self.shot(page,'skipped-390')
+        other=self.page();early=self.start(other);self.answer(other,early)
+        self.assertEqual(self.api(other,'/api/interview/end','POST',dict(session_id=early))['status'],200)
+        self.interview(other);self.assertEqual(self.state(other,early)['completion']['kind'],'ended')
+        self.assertNotIn('已完成全部作答',other.locator('#completionCard').inner_text());self.assertNotEqual(other.locator('#progressTrack').get_attribute('aria-valuenow'),'100')
+        self.assertFalse(other.locator('#answerCard').is_visible());self.shot(other,'ended-390')
+    def test_report_running_ready_failed_and_interrupted(self):
+        page=self.page();sid=self.start(page)
+        for _ in range(6):self.answer(page,sid)
+        before=len(grade_calls);release.clear();entered.clear()
+        try:
+            self.assertEqual(self.api(page,'/api/report/'+sid)['status'],202);self.assertTrue(entered.wait(3))
+            for _ in range(2):self.assertEqual(self.api(page,'/api/report/'+sid)['status'],202)
+            self.interview(page);button=page.locator('#viewReportBtn')
+            self.assertEqual(button.inner_text(),'报告生成中');self.assertTrue(button.is_disabled());self.shot(page,'report-generating-390')
+            page.locator('#feedbackSummary').click();page.wait_for_timeout(2700)
+            self.assertFalse(page.locator('#aiFeedback').evaluate('(e)=>e.open'));self.assertTrue(button.is_disabled())
+            self.assertEqual(len(grade_calls),before+1)
+        finally:release.set()
+        page.wait_for_function('document.querySelector("#viewReportBtn").textContent==="查看面试报告"',timeout=12000)
+        self.assertTrue(button.is_enabled());self.assertEqual(len(grade_calls),before+1)
+        failed=self.start(page)
+        for _ in range(6):self.answer(page,failed)
+        fail_grade[0]=True;self.api(page,'/api/report/'+failed)
+        end=time.monotonic()+5
+        while self.state(page,failed)['report_state']!='failed' and time.monotonic()<end:time.sleep(.05)
+        self.interview(page);self.assertIn('报告生成失败',page.locator('#completionReportHint').inner_text());self.assertTrue(button.is_enabled());self.shot(page,'report-failed-390')
+        calls=len(grade_calls);page.wait_for_timeout(2700);self.assertEqual(len(grade_calls),calls)
+        # Simulate a restarted process, without letting the live test worker reclaim this task.
+        with env.database.get_conn() as conn:conn.execute("UPDATE report_jobs SET state='running',lease_until=? WHERE interview_id=?",(time.time()+90,failed))
+        with patch.object(env.server,'REPORT_JOB_SERVICE',None):
+            page.reload(wait_until='networkidle');self.assertIn('处理中断',page.locator('#completionReportHint').inner_text());self.assertTrue(button.is_enabled())
+    def test_finished_api_rejects_new_answers_and_inconsistent_records(self):
+        page=self.page();sid=self.start(page)
+        for _ in range(6):self.answer(page,sid)
+        count=len(env.database.get_messages(sid));calls=len(grade_calls)
+        self.assertEqual(self.api(page,'/api/interview/answer','POST',dict(session_id=sid,answer='完成后的新回答'))['status'],409)
+        env.server.SESSIONS.clear()
+        self.assertEqual(self.api(page,'/api/interview/answer','POST',dict(session_id=sid,answer='重启恢复后的新回答'))['status'],409)
+        self.assertEqual(len(env.database.get_messages(sid)),count);self.assertEqual(len(grade_calls),calls)
+        # Status alone is insufficient: persisted question/answer coverage must agree.
+        partial=self.start(page);self.answer(page,partial);env.database.finish_interview(partial,'finished')
+        self.assertFalse(self.state(page,partial)['completion']['all_answered'])
+        missing=self.start(page)
+        for _ in range(5):self.answer(page,missing)
+        env.database.finish_interview(missing,'finished')
+        state=self.state(page,missing);self.assertEqual(state['completion']['unanswered'],1);self.assertFalse(state['completion']['all_answered'])
+        other=self.page();self.assertEqual(self.api(other,'/api/interview/'+sid+'/state')['status'],404)
 
 if __name__=='__main__':
     try:

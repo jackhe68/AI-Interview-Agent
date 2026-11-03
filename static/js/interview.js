@@ -67,6 +67,7 @@
   var recoverBtn = document.getElementById('recoverStateBtn');
   var clearDraftBtn = document.getElementById('clearDraftBtn');
   var completionCard = document.getElementById('completionCard');
+  var completion = null, reportState = 'unknown', reportPoll = null;
   function status(text, error) { if (draftStatus.textContent !== text) draftStatus.textContent = text; draftStatus.classList.toggle('is-error',!!error); }
   function saveDraft() {
     if(window.Account && !Account.ownsPage())return;
@@ -97,19 +98,37 @@
     } catch (error) {}
   }
   function showCompletion() {
-    completionCard.classList.toggle('is-hidden',!finished);
-    if (finished) {
-      progressFill.style.width = '100%';
-      document.getElementById('progressTrack').setAttribute('aria-valuenow','100');
-      document.getElementById('progressTrack').setAttribute('aria-valuetext','本场作答已结束，等待手动查看报告');
-      endBtn.textContent = '查看报告';
-      setState('idle','作答已保存，请先查看最后点评，再手动进入报告','✅');
-      progressPhase.textContent = '等待手动查看报告';
+    var terminal=stateReady && finished;
+    completionCard.classList.toggle('is-hidden',!terminal);
+    stage.classList.toggle('is-complete',terminal);
+    ['voiceCard','answerCard','answerStage'].forEach(function(id){document.getElementById(id).hidden=terminal;});
+    endBtn.hidden=terminal;
+    document.querySelector('.question-card__tts').hidden=terminal;
+    document.getElementById('lastAnswerCard').hidden=!terminal || !document.getElementById('lastAnswerText').textContent;
+    if (terminal) {
+      document.getElementById('backgroundSession').classList.add('is-hidden');
+      var complete=completion && completion.kind==='complete';
+      var skipped=completion && completion.skipped || 0;
+      var label=complete ? '全部问题已完成' : skipped ? '本场面试已结束（含跳过的问题）' : '本场面试已结束';
+      document.getElementById('completionTitle').textContent=complete ? '本场面试已完成' : '本场面试已结束';
+      document.getElementById('completionDescription').textContent=complete ? '已完成全部作答，所有回答和点评均已保存。请查看本场面试报告。' : skipped ? '本场已结束，其中跳过了'+skipped+'个问题。已提交的回答和点评均已保存，请查看本场面试报告。' : '本场已结束。报告仅基于已提交的回答生成，未作答的问题不计入评价。';
+      document.getElementById('completionStatus').textContent=label;
+      document.querySelector('#feedbackSummary>span').textContent='最后一题点评与改进建议';
+      if (completion && completion.all_processed) {
+        progressFill.style.width='100%';document.getElementById('progressTrack').setAttribute('aria-valuenow','100');
+      }
+      document.getElementById('progressTrack').setAttribute('aria-valuetext',label);
+      progressPhase.textContent=label;
+      var generating=reportState==='pending' || reportState==='running';
+      var button=document.getElementById('viewReportBtn');
+      button.disabled=generating;
+      button.textContent=generating ? '报告生成中' : reportState==='not_generated' ? '生成并查看报告' : reportState==='failed' ? '查看报告并重试' : '查看面试报告';
+      document.getElementById('completionReportHint').textContent=generating ? '正在整理报告，完成后按钮会自动恢复。你也可以稍后从历史面试查看。' : reportState==='failed' ? '报告生成失败，回答和点评仍保留。进入报告页后可手动重试。' : reportState==='interrupted' ? '上次报告处理中断，回答和点评仍保留。进入报告页可继续恢复。' : '';
     }
     answerInput.readOnly = finished;
   }
   function displayFeedback(comment) {
-    if (comment) { feedbackCard.open=!!finished; feedbackBodyEl.textContent = comment; syncFeedbackLabel(); feedbackCard.classList.remove('is-hidden'); }
+    if (comment) { if(feedbackBodyEl.textContent!==comment)feedbackCard.open=!!finished; feedbackBodyEl.textContent = comment; syncFeedbackLabel(); feedbackCard.classList.remove('is-hidden'); }
   }
   function syncFeedbackLabel() { feedbackTagEl.textContent=feedbackCard.open ? '收起详情' : '展开详情'; }
   feedbackCard.addEventListener('toggle',syncFeedbackLabel);
@@ -126,7 +145,12 @@
       clearRecording();
     }
     questionId = data.question_sequence;
-    finished = !!data.finished; if(finished)feedbackCard.open=true; stateProcessing = !!data.processing;
+    var wasFinished=finished;
+    finished = !!data.finished; if(finished && !wasFinished)feedbackCard.open=true; stateProcessing = !!data.processing;
+    completion=data.completion || null;reportState=data.report_state || 'unknown';
+    document.getElementById('lastAnswerText').textContent=data.last_answer || '';
+    clearTimeout(reportPoll);
+    if (finished && (reportState==='pending' || reportState==='running')) reportPoll=setTimeout(function(){if(!window.Account || Account.ownsPage())recoverState();},2500);
     answered = data.answered_count || 0; answeredCountEl.textContent = answered;
     if (Number.isFinite(data.elapsed_seconds)) { totalSec = data.elapsed_seconds; timerTextEl.textContent = fmt(totalSec); }
     session.progress = data.progress; session.question_sequence = questionId;
@@ -138,6 +162,7 @@
     else if (stateProcessing) status('上一条回答仍在处理，请稍后点击“恢复当前题目”；草稿已保留。');
     else status(oldId !== questionId ? '已恢复服务器上的当前题目；旧草稿不会自动填入新题。' : restored && restored.text ? '已恢复本题草稿，可继续编辑或手动提交。' : '草稿仅保存在当前浏览器，保留24小时；录音文件不保存。');
     if (!finished && !drafts.available) status('浏览器暂不能保存草稿，请复制回答备份后再离开页面。',true);
+    if (finished) { stopQuestionSpeech();clearRecording(); }
     showCompletion(); checkpoint();
   }
   function recoverState() {
@@ -151,6 +176,7 @@
         stateReady = true; applySnapshot(data); return true;
       }); })
       .catch(function () {
+        if (stateReady && finished) document.getElementById('completionReportHint').textContent='暂时无法核对报告状态，请联网后刷新；已保存的回答和点评仍保留。';
         status('暂未连上面试服务，草稿仍可编辑。联网后点击“恢复当前题目”，再提交。',true); return false;
       }).finally(function () {
         clearTimeout(timer); recovering = false; recoveryPromise = null; recoverBtn.disabled = false; syncControls();
@@ -165,7 +191,7 @@
     status(drafts.available ? '本题输入草稿已清空。' : '输入已清空，但浏览器存储不可用，无法确认本机草稿已清除。', !drafts.available);
   });
   recoverBtn.addEventListener('click',function () { saveDraft(); recoverState(); });
-  function viewReport() { drafts.clear(); window.location.href = '/report?id=' + encodeURIComponent(session.session_id); }
+  function viewReport() { if(document.getElementById('viewReportBtn').disabled)return;document.getElementById('viewReportBtn').disabled=true; drafts.clear(); window.location.href = '/report?id=' + encodeURIComponent(session.session_id); }
   document.getElementById('viewReportBtn').addEventListener('click',viewReport);
   var backgroundSession = document.getElementById('backgroundSession');
   var backgroundVersion = 0;
@@ -292,7 +318,7 @@
           setState('idle','请查看上一题点评，并继续回答当前问题','🎙️'); updateProgress(data.progress);
           status(edited ? '上一题已提交；处理中新增的文字保留在上方，不会自动填入下一题。' : '上一题已保存。当前题目可继续作答，草稿将自动保存。');
         } else {
-          drafts.clear(); status('最后一题的点评已保留。看完后，点击“结束面试并查看报告”。');
+          drafts.clear();return recoverState();
         }
       });
     }).catch(function (error) {
@@ -391,7 +417,7 @@
     confirmEndBtn.disabled = busy || recovering || ending;
     endBtn.disabled = busy || recovering || ending;
     recoverBtn.disabled = busy || recovering;
-    document.getElementById('viewReportBtn').disabled = busy || recovering;
+    document.getElementById('viewReportBtn').disabled = busy || recovering || reportState==='pending' || reportState==='running';
     clearDraftBtn.disabled = busy || finished;
     answerInput.readOnly = finished;
     analysisToggle.disabled = locked || voicePending();
