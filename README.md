@@ -36,7 +36,7 @@ flowchart TD
     B --> F[ReportLab<br/>PDF 导出]
 ```
 
-这是逻辑架构图。浏览器录音上传至服务器临时处理，本机模型转写后返回文字；用户检查、编辑并提交的回答用于面试与评价。报告由后台任务生成，PDF 由 ReportLab 导出。草稿保存在浏览器；游客和账户练习记录保存在服务端 SQLite。当前项目运行在本地 Windows 电脑上，可通过 Cloudflare Tunnel 将本地服务提供给公网访问；电脑需保持开机并联网。独立的 [云服务器部署手册](deploy/README.md) 是备用方案，不代表当前已采用该方案。
+这是逻辑架构图。浏览器录音上传至服务器临时处理，本机模型转写后返回文字；用户检查、编辑并提交的回答用于面试与评价。报告由后台任务生成，PDF 由 ReportLab 导出。草稿保存在浏览器；游客和账户练习记录保存在服务端 SQLite。当前项目运行在本地 Windows 电脑上，可通过 Cloudflare Tunnel 将本地服务提供给公网访问；电脑需保持开机并联网。
 
 ## 代码结构
 
@@ -77,7 +77,7 @@ $env:APP_INSECURE = "1"  # 仅本机HTTP调试
 
 首次使用语音转写需要下载 Whisper 模型，下载需要网络和磁盘空间；纯文字练习不需要先下载模型。`APP_INSECURE=1` 仅用于本机 HTTP 调试，不用于 HTTPS 生产部署。
 
-若启动失败，先确认 Python 版本、依赖安装完成及 5001 端口未被占用；若 AI 请求失败，检查 `.env` 中的 `DEEPSEEK_API_KEY`、账户额度和网络，不要公开或提交密钥。模型服务故障不代表本地页面无法打开。本地公网试用及排障见 [公网试用说明](docs/public-trial-guide.md)；云服务器部署仅为 [备用方案](deploy/README.md)。
+若启动失败，先确认 Python 版本、依赖安装完成及 5001 端口未被占用；若 AI 请求失败，检查 `.env` 中的 `DEEPSEEK_API_KEY`、账户额度和网络，不要公开或提交密钥。模型服务故障不代表本地页面无法打开。本地公网试用及排障见 [公网试用说明](docs/public-trial-guide.md)。
 
 ## 测试
 
@@ -117,7 +117,7 @@ $env:APP_INSECURE = "1"  # 仅本机HTTP调试
 - [账户、安全、数据库迁移与运维交付](docs/accounts-and-operations.md)
 
 - [公网试用说明](docs/public-trial-guide.md)
-- [云服务器部署手册（备用方案）](deploy/README.md)
+
 - [新评估报告复核与改进](docs/new-assessment-review.md)
 - [时间与基础交互优化](docs/time-and-interaction.md)
 - [继续面试与后台报告](docs/practice-flow.md)
