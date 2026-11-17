@@ -123,7 +123,7 @@ $env:APP_INSECURE = "1"  # 仅本机HTTP调试
 - [继续面试与后台报告](docs/practice-flow.md)
 - [草稿保护与手动查看报告](docs/draft-recovery.md)
 - [专业选择与岗位推荐](docs/major-paths.md)
-- [后续改进待办](docs/improvement-backlog.md)
+
 
 `tests/` 包含面试流程、草稿恢复、语音、报告与浏览器交互检查；部分检查需要本机浏览器和语音模型，浏览器路径可在对应脚本中调整。
 
