@@ -17,7 +17,7 @@
 - 按学科和专业逐级选择练习方向，保留直接选择岗位的入口。
 - 提供多种面试难度，根据回答进行追问。
 - 每题给出具体点评、回答思路、参考回答与练习建议。
-- 回答草稿按面试和题目保存在当前浏览器，保留24小时，刷新后可恢复。
+- 回答草稿按面试和题目保存在当前浏览器，24小时内可恢复；过期项在读取或初始化时清理。
 - 首页和历史记录可继续未完成面试，手机提供可展开的导航菜单。
 - 报告后台生成，等待时先看已保存的逐题点评；可离开后回来查看，失败后手动重试。
 - 静态资源按内容生成版本，重复访问可使用浏览器缓存。
@@ -25,9 +25,40 @@
 - 综合评分、八维分析、薄弱点建议、历史记录和 PDF 导出。
 - 可选填写练习背景，并提供语音分析功能。
 
+## 技术架构
+
+```mermaid
+flowchart TD
+    A[浏览器：HTML / CSS / JavaScript<br/>岗位选择、文字与录音、报告展示] -->|HTTP 请求| B[Flask 后端<br/>路由、账户权限、面试流程与报告任务]
+    B --> C[SQLite<br/>账户、练习记录与报告]
+    B -->|岗位配置、问题、用户提交的回答等| D[DeepSeek API<br/>生成问题、追问与练习反馈]
+    B --> E[faster-whisper<br/>服务端语音转写]
+    B --> F[ReportLab<br/>PDF 导出]
+```
+
+这是逻辑架构图。浏览器录音上传至服务器临时处理，本机模型转写后返回文字；用户检查、编辑并提交的回答用于面试与评价。报告由后台任务生成，PDF 由 ReportLab 导出。草稿保存在浏览器；游客和账户练习记录保存在服务端 SQLite。生产部署使用 Waitress 单进程多线程，由 Nginx 反向代理；进程内状态使多进程部署需要额外设计，详见 [部署手册](deploy/README.md)。
+
+## 代码结构
+
+- `app.py`：Flask 路由、面试处理及模型调用。
+- `accounts.py`、`account_migration.py`：账户、权限与数据库迁移。
+- `database.py`：SQLite 数据表及读写。
+- `speech.py`、`audio_analysis.py`：语音转写与可选音频分析。
+- `practice_feedback.py`、`report_jobs.py`、`report_pdf.py`：评价、报告任务和 PDF。
+- `static/`、根目录 HTML：浏览器界面；`tests/`：测试；`deploy/`：部署配置。
+
 ## 本地运行（Windows）
 
-当前本机验证环境为 Python 3.13。在项目目录执行：
+以下命令面向 Windows PowerShell。先安装 Git 与 Python 3.13，并确认版本：
+
+```powershell
+git --version
+python --version
+git clone --branch competition-final-20261103 https://github.com/jackhe68/AI-Interview-Agent.git
+cd AI-Interview-Agent
+```
+
+在项目目录执行：
 
 ```powershell
 python -m venv .venv
@@ -42,7 +73,36 @@ $env:APP_INSECURE = "1"  # 仅本机HTTP调试
 .\.venv\Scripts\python.exe app.py
 ```
 
-浏览器打开 <http://127.0.0.1:5001>。首次使用语音转写需要下载 Whisper 模型；纯文字练习不需要先下载语音模型。
+浏览器打开 <http://127.0.0.1:5001>。可在另一个 PowerShell 窗口访问 <http://127.0.0.1:5001/api/health>：`ok` 表示应用响应，`deepseek_configured` 只表示客户端已配置，不能证明密钥有效或服务可用。
+
+首次使用语音转写需要下载 Whisper 模型，下载需要网络和磁盘空间；纯文字练习不需要先下载模型。`APP_INSECURE=1` 仅用于本机 HTTP 调试，不用于 HTTPS 生产部署。
+
+若启动失败，先确认 Python 版本、依赖安装完成及 5001 端口未被占用；若 AI 请求失败，检查 `.env` 中的 `DEEPSEEK_API_KEY`、账户额度和网络，不要公开或提交密钥。模型服务故障不代表本地页面无法打开。生产运行及排障见 [部署手册](deploy/README.md)。
+
+## 测试
+
+在项目目录并使用上述虚拟环境，可先运行不需要真实 API 密钥的语音接口基础检查：
+
+```powershell
+.\.venv\Scripts\python.exe -m unittest discover -s tests -p test_speech42.py
+```
+
+此文件使用临时 SQLite、测试客户端和模拟的转写；运行时依赖见 `deploy/requirements.txt`。浏览器测试还需安装相应浏览器和 Playwright 等开发依赖，部分语音集成检查需要模型；具体条件见对应测试及验收文档。测试替身结果不能证明真实 DeepSeek 效果、线上安全或容量。
+
+## 数据与隐私边界
+
+- 游客练习保存在服务端，通过浏览器凭据关联；登录后需要用户确认才能迁移至账户。
+- 未提交的文字草稿保存在当前浏览器，超过 24 小时在读取或初始化时检查并清理，并非定时准点删除。
+- 录音上传到服务器，产生临时文件供转写，处理结束时尝试清理；转写文字经用户提交后作为回答保存，并发送给 DeepSeek 生成反馈。
+- 练习回答可能含有用户自行填写的个人信息。账户资料默认不自动作为本场背景发送，授权选项及删除说明见应用中的隐私页面。第三方收到的数据按其自身处理规则处理。
+
+## 团队信息
+
+- 团队名称：待填写
+- 学校：待填写
+- 成员及分工：待填写
+- 指导教师：待填写
+
 
 ## 文档
 
