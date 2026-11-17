@@ -73,7 +73,7 @@ $env:APP_INSECURE = "1"  # 仅本机HTTP调试
 .\.venv\Scripts\python.exe app.py
 ```
 
-浏览器打开 <http://127.0.0.1:5001>。可在另一个 PowerShell 窗口访问 <http://127.0.0.1:5001/api/health>：`ok` 表示应用响应，`deepseek_configured` 只表示客户端已配置，不能证明密钥有效或服务可用。
+浏览器打开 <http://127.0.0.1:5001>。可在另一个 PowerShell 窗口访问 <http://127.0.0.1:5001/api/health>：`ok` 表示应用响应，`deepseek_configured` 表示客户端已配置。
 
 首次使用语音转写需要下载 Whisper 模型，下载需要网络和磁盘空间；纯文字练习不需要先下载模型。`APP_INSECURE=1` 仅用于本机 HTTP 调试，不用于 HTTPS 生产部署。
 
@@ -87,7 +87,7 @@ $env:APP_INSECURE = "1"  # 仅本机HTTP调试
 .\.venv\Scripts\python.exe -m unittest discover -s tests -p test_speech42.py
 ```
 
-此文件使用临时 SQLite、测试客户端和模拟的转写；运行时依赖见 `deploy/requirements.txt`。浏览器测试还需安装相应浏览器和 Playwright 等开发依赖，部分语音集成检查需要模型；具体条件见对应测试及验收文档。测试替身结果不能证明真实 DeepSeek 效果、线上安全或容量。
+此文件使用临时 SQLite、测试客户端和模拟的转写；运行时依赖见 `deploy/requirements.txt`。浏览器测试还需安装相应浏览器和 Playwright 等开发依赖，部分语音集成检查需要模型；具体条件见对应测试及验收文档。
 
 ## 数据与隐私边界
 
