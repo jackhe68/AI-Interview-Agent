@@ -27,7 +27,7 @@
 | `index.html`、`interview.html`、`history.html`、`report.html` | 引入账户入口和相应交互 |
 | `static/js/drafts.js`、`history.js`、`interview.js`、`main.js`、`navigation.js`、`report.js`、`static/css/style.css` | 草稿身份隔离、历史互斥状态、手机操作距离、点评折叠及反馈文案 |
 | `tests/test_accounts.py`、`test_account_migration.py`、`test_account_restart.py`、`test_account_browser.py`、`test_formal_security.py` | 新增验证；原语音、报告、草稿测试适配新的身份引导/点评折叠 |
-| `.env.example`、`.gitignore`、`README.md`、`docs/improvement-backlog.md` | 启动、敏感文件排除和运维说明 |
+| `.env.example`、`.gitignore`、`README.md` | 启动、敏感文件排除和运维说明 |
 
 ## 数据模型与无损迁移
 
