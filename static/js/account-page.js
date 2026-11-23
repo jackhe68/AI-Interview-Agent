@@ -38,7 +38,7 @@
   });
  }
  Account.ready.then(function(data){
-  fillCatalog(document.getElementById('registerForm'),data);fillCatalog(document.getElementById('profileForm'),data);render(data);
+  fillCatalog(document.getElementById('profileForm'),data);render(data);
   submit('registerForm','/api/account/register','POST',function(){document.getElementById('registerForm').reset();return Account.changed().then(function(fresh){render(fresh);message('注册成功，已登录。游客记录需要另行确认迁移。');});});
   submit('loginForm','/api/account/login','POST',function(){document.getElementById('loginForm').reset();return Account.changed().then(function(fresh){render(fresh);message('登录成功。');});});
   submit('profileForm','/api/account/profile','PATCH',function(){return Account.refresh().then(function(fresh){render(fresh);message('资料已保存；历史报告不会随资料修改而改变。');});});

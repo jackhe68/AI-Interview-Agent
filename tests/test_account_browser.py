@@ -21,12 +21,18 @@ out=Path(os.environ.get('TEST_ARTIFACT_DIR',str(ROOT/'.test-artifacts/account-sc
 def register(page,name,nick):
  page.goto(base+'/account',wait_until='networkidle');page.locator('#showRegister').click()
  form=page.locator('#registerForm');form.locator('[name=username]').fill(name);form.locator('[name=password]').fill('browser password 123');form.locator('[name=confirm_password]').fill('browser password 123')
- form.locator('[name=nickname]').fill(nick);form.locator('[name=major_id]').select_option(index=1);form.locator('[name=grade]').select_option('master-1')
+ assert form.locator('input').count()==3
+ assert form.locator('[name=nickname], [name=major_id], [name=grade], [name=other_major]').count()==0
  form.locator('[name=username]').focus();page.keyboard.press('Tab');assert page.evaluate('document.activeElement.name')=='password'
  form.locator('[name=confirm_password]').fill('a different password');form.locator('button').click();assert '不一致' in form.locator('[data-error=confirm_password]').inner_text()
  page.screenshot(path=str(out/('registration-'+str(page.viewport_size['width'])+'.png')),full_page=True)
  form.locator('[name=confirm_password]').fill('browser password 123');form.locator('button').click()
  page.wait_for_function('!document.querySelector("#signedAccount").hidden')
+ assert page.locator('#profileForm [name=nickname]').input_value()==name
+ assert page.locator('#profileForm [name=major_id]').input_value()==''
+ assert page.locator('#profileForm [name=grade]').input_value()==''
+ profile=page.locator('#profileForm');profile.locator('[name=nickname]').fill(nick);profile.locator('[name=major_id]').select_option(index=1);profile.locator('[name=grade]').select_option('master-1');profile.locator('button').click()
+ page.wait_for_function('document.querySelector("#accountStatus").textContent.includes("资料已保存")')
 try:
  with sync_playwright() as p:
   browser=p.chromium.launch(executable_path=r'C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe',headless=True)

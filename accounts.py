@@ -43,7 +43,7 @@ def profile_for(db,uid):
         row=conn.execute('SELECT u.id,u.username,p.nickname,p.major_id,p.other_major,p.grade FROM users u JOIN user_profiles p ON p.user_id=u.id WHERE u.id=?',(uid,)).fetchone()
     if not row:return None
     result=dict(row);result['major']=MAJORS.get(result['major_id'],{}).get('name',result['other_major'])
-    result['grade_label']=GRADES.get(result['grade'],'其他学习阶段')
+    result['grade_label']=GRADES.get(result['grade'],'其他学习阶段') if result['grade'] else ''
     return result
 
 def valid_text(value):
@@ -62,9 +62,9 @@ def profile_fields(data):
     errors={}
     nick=data.get('nickname');major=data.get('major_id');other=data.get('other_major','');grade=data.get('grade')
     if not valid_text(nick) or not 1<=len(nick.strip())<=40:errors['nickname']='请输入1至40字的称呼，可使用昵称'
-    if not isinstance(major,str) or (major not in MAJORS and major!='other'):errors['major_id']='请选择专业或其他'
+    if not isinstance(major,str) or (major not in MAJORS and major not in ('','other')):errors['major_id']='请选择专业或其他'
     if not valid_text(other) or len(other.strip())>80 or (major=='other' and not other.strip()):errors['other_major']='选择其他时请填写1至80字的专业'
-    if not isinstance(grade,str) or grade not in GRADES:errors['grade']='请选择当前学习阶段'
+    if not isinstance(grade,str) or (grade and grade not in GRADES):errors['grade']='请选择当前学习阶段'
     return errors,dict(nickname=nick.strip() if isinstance(nick,str) else '',major_id=major,other_major=other.strip() if isinstance(other,str) and major=='other' else '',grade=grade)
 
 def passwords(data):
@@ -235,7 +235,9 @@ def install(app,db,server):
         if not isinstance(username,str) or not re.fullmatch('[A-Za-z][A-Za-z0-9_]{2,31}',username):return error('请检查用户名格式',fields={'username':'用户名须以字母开头，3至32位字母、数字或下划线'})
         username=username.lower()
         if limited('register',username):return error('注册尝试较多，请稍后再试',429,'rate_limited')
-        errors,profile=profile_fields(data);errors.update(passwords(data))
+        profile_data=dict(nickname=username,major_id='',grade='')
+        profile_data.update(data)
+        errors,profile=profile_fields(profile_data);errors.update(passwords(data))
         if errors:return error('请检查填写内容',fields=errors)
         uid=uuid.uuid4().hex;hashed=generate_password_hash(data['password'],method='scrypt')
         try:

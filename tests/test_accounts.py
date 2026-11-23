@@ -25,6 +25,29 @@ class AccountTests(unittest.TestCase):
   with patch.object(env.server,'call_deepseek',return_value='请介绍自己的学习项目'):
    r=send(c,'/api/interview/start',dict(job='Java 后端',level='校招标准',**extra))
   self.assertEqual(r.status_code,200,r.json);return r.json['session_id']
+ def test_registration_requires_only_credentials_and_keeps_profile_editable(self):
+  credentials=dict(username='simple_user',password='correct horse battery',confirm_password='correct horse battery')
+  response=send(self.a,'/api/account/register',credentials)
+  self.assertEqual(response.status_code,200,response.json)
+  user=response.json['user']
+  self.assertEqual(user['nickname'],'simple_user')
+  for key in ('major_id','major','grade','grade_label'):self.assertEqual(user[key],'')
+  self.assertEqual(send(self.b,'/api/account/register',credentials).status_code,409)
+  send(self.a,'/api/account/logout')
+  self.assertEqual(send(self.a,'/api/account/login',dict(username='simple_user',password=credentials['password'])).status_code,200)
+  self.assertEqual(session(self.a)['user'],user)
+  profile=dict(nickname='新的称呼',major_id='',other_major='',grade='')
+  self.assertEqual(send(self.a,'/api/account/profile',profile,'PATCH').status_code,200)
+  self.assertEqual(session(self.a)['user']['nickname'],'新的称呼')
+  profile.update(major_id=next(iter(MAJORS)),grade='master-1')
+  self.assertEqual(send(self.a,'/api/account/profile',profile,'PATCH').status_code,200)
+  self.assertEqual(session(self.a)['user']['grade'],'master-1')
+ def test_minimal_registration_still_validates_credentials(self):
+  credentials=dict(username='simple_user',password='correct horse battery',confirm_password='correct horse battery')
+  for invalid in (dict(username='1bad'),dict(password='short'),dict(confirm_password='different password')):
+   response=send(self.a,'/api/account/register',dict(credentials,**invalid))
+   self.assertEqual(response.status_code,400,response.json)
+  with env.database.get_conn() as conn:self.assertEqual(conn.execute('SELECT count(*) FROM users').fetchone()[0],0)
  def test_password_change_blocks_inflight_old_password_login(self):
   import accounts,threading
   from concurrent.futures import ThreadPoolExecutor
